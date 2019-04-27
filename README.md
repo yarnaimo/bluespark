@@ -1,0 +1,2 @@
+# bluespark
+TypeScript + Firestore
