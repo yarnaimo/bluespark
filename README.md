@@ -1,2 +1,56 @@
-# bluespark
-TypeScript + Firestore
+# BlueSpark
+
+> Firestore library for TypeScript using io-ts
+
+## Installation
+
+```sh
+yarn add firebase bluespark
+```
+
+## Usage
+
+```ts
+import * as firebase from 'firebase'
+import * as t from 'io-ts'
+import { dayjs, blue, DayjsFromFirestoreTimestamp, FieldValue } from 'bluespark'
+
+firebase.initializeApp({
+    apiKey: '### FIREBASE API KEY ###',
+    authDomain: '### FIREBASE AUTH DOMAIN ###',
+    projectId: '### CLOUD FIRESTORE PROJECT ID ###',
+})
+
+const db = firebase.firestore()
+
+// Schema
+const Post = blue(
+    t.type({
+        id: t.number,
+        date: DayjsFromFirestoreTimestamp,
+        text: t.string,
+        tags: t.array(t.string),
+    }),
+)
+```
+
+### get
+
+```ts
+const post = await db
+    .collection('posts')
+    .doc('doc-path')
+    .get()
+    .then(Post.in)
+```
+
+### set, setMerge, update
+
+```ts
+await Post.out(doc()).set({
+    id: 17,
+    date: dayjs(),
+    text: 'text',
+    tags: ['a', 'b'],
+})
+```
