@@ -1,6 +1,6 @@
 {
   "name": "bluespark",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "repository": "github:yarnaimo/bluespark",
   "license": "MIT",
   "author": "yamaimo <yarnaimo@gmail.com>",
@@ -10,6 +10,7 @@
     "debug": "node --inspect -r ts-node/register",
     "dev": "yarn ts-node src/index.ts",
     "prepare": "yarn build",
+    "serve": "firebase serve --only firestore",
     "start": "NODE_ENV=production node dist/index.js",
     "test": "NODE_ENV=test jest",
     "ts-node": "ts-node"
@@ -18,6 +19,10 @@
     "@yarnaimo/rain": "latest"
   },
   "devDependencies": {
+    "@yarnaimo/firebase-testing": "latest",
     "@yarnaimo/tss": "latest"
+  },
+  "peerDependencies": {
+    "firebase": "^5.10.1"
   }
 }
