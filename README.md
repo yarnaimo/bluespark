@@ -22,6 +22,7 @@ firebase.initializeApp({
 })
 
 const db = firebase.firestore()
+const posts = db.collection('posts')
 
 // Schema
 const Post = blue(
@@ -37,8 +38,7 @@ const Post = blue(
 ### get
 
 ```ts
-const post = await db
-    .collection('posts')
+const post = await posts
     .doc('doc-path')
     .get()
     .then(Post.in)
@@ -47,7 +47,7 @@ const post = await db
 ### set, setMerge, update
 
 ```ts
-await Post.out(doc()).set({
+await Post.out(posts.doc('doc-path')).set({
     id: 17,
     date: dayjs(),
     text: 'text',
