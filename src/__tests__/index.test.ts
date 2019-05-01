@@ -1,8 +1,7 @@
 import { FirestoreTest } from '@yarnaimo/firebase-testing'
-import { t } from '@yarnaimo/rain'
-import dayjs from 'dayjs'
-import { firestore } from 'firebase'
+import { dayjs, t } from '@yarnaimo/rain'
 import { blue } from '../blue'
+import { firestore } from '../firestore'
 import { DayjsFromFirestoreTimestamp } from '../types/DayjsFromFirestoreTimestamp'
 import { FieldValue } from '../types/FieldValue'
 
@@ -50,9 +49,20 @@ describe('read', () => {
     })
 
     test('get', async () => {
+        const post = await Post(doc()).get()
+
+        expect(post).toEqual({
+            id: 17,
+            date,
+            text: 'text',
+            tags: ['a', 'b'],
+        })
+    })
+
+    test('get - ss', async () => {
         const post = await doc()
             .get()
-            .then(Post.in)
+            .then(Post.ss)
 
         expect(post).toEqual({
             id: 17,
@@ -65,7 +75,7 @@ describe('read', () => {
 
 describe('write', () => {
     test('set', async () => {
-        await Post.out(doc()).set({
+        await Post(doc()).set({
             id: 17,
             date,
             text: 'text',
@@ -80,9 +90,25 @@ describe('write', () => {
         })
     })
 
+    test('set - serverTimestamp', async () => {
+        await Post(doc()).set({
+            id: 17,
+            date: firestore.FieldValue.serverTimestamp(),
+            text: 'text',
+            tags: ['a', 'b'],
+        })
+
+        expect(await docData()).toEqual({
+            id: 17,
+            date: expect.any(firestore.Timestamp),
+            text: 'text',
+            tags: ['a', 'b'],
+        })
+    })
+
     test('setMerge', async () => {
         await set()
-        await Post.out(doc()).setMerge({
+        await Post(doc()).setMerge({
             text: 'new-text',
         })
 
@@ -96,7 +122,7 @@ describe('write', () => {
 
     test('update', async () => {
         await set()
-        await Post.out(doc()).update({
+        await Post(doc()).update({
             text: 'new-text',
         })
 

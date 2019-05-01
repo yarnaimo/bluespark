@@ -38,16 +38,19 @@ const Post = blue(
 ### get
 
 ```ts
+const post = await Post(posts.doc('doc-path')).get()
+
+// from snapshot
 const post = await posts
     .doc('doc-path')
     .get()
-    .then(Post.in)
+    .then(Post.ss)
 ```
 
 ### set, setMerge, update
 
 ```ts
-await Post.out(posts.doc('doc-path')).set({
+await Post(posts.doc('doc-path')).set({
     id: 17,
     date: dayjs(),
     text: 'text',

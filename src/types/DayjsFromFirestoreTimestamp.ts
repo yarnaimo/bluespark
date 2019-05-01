@@ -1,8 +1,12 @@
 import { t } from '@yarnaimo/rain'
 import day, { Dayjs, isDayjs } from 'dayjs'
-import { firestore } from 'firebase'
+import { admin, firestore } from '../firestore'
 
-export class DayjsFromFirestoreTimestampType extends t.Type<Dayjs, firestore.Timestamp, t.mixed> {
+export class DayjsFromFirestoreTimestampType extends t.Type<
+    Dayjs,
+    firestore.Timestamp | admin.Timestamp,
+    unknown
+> {
     readonly _tag = 'DayjsFromFirestoreTimestampType' as const
     constructor() {
         super(
