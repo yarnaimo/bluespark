@@ -3,3 +3,4 @@ import { firestore as admin } from 'firebase-admin'
 export { firestore, admin }
 
 export type FirestoreFieldValue = firestore.FieldValue | admin.FieldValue
+export type FirestoreDocumentReference = firestore.DocumentReference | admin.DocumentReference

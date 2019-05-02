@@ -4,6 +4,7 @@ import { blue } from '../blue'
 import { firestore } from '../firestore'
 import { DayjsFromFirestoreTimestamp } from '../types/DayjsFromFirestoreTimestamp'
 import { FieldValue } from '../types/FieldValue'
+import { DocumentReference } from './../types/DocumentReference'
 
 const provider = new FirestoreTest('bluespark-test')
 let db: firestore.Firestore
@@ -12,6 +13,8 @@ const path = 'doc-path'
 const date = dayjs()
 
 const doc = () => db.collection('posts').doc(path)
+const userDoc = () => db.collection('users').doc(path)
+
 const docData = () =>
     doc()
         .get()
@@ -23,6 +26,12 @@ const set = () =>
         date: date.toDate(),
         text: 'text',
         tags: ['a', 'b'],
+        user: userDoc(),
+    })
+
+const setUser = () =>
+    userDoc().set({
+        name: 'imo',
     })
 
 beforeEach(async () => {
@@ -40,11 +49,13 @@ const Post = blue(
         date: t.union([DayjsFromFirestoreTimestamp, FieldValue]),
         text: t.string,
         tags: t.array(t.string),
+        user: DocumentReference,
     }),
 )
 
 describe('read', () => {
     beforeEach(async () => {
+        await setUser()
         await set()
     })
 
@@ -56,6 +67,7 @@ describe('read', () => {
             date,
             text: 'text',
             tags: ['a', 'b'],
+            user: expect.any(firestore.DocumentReference),
         })
     })
 
@@ -69,6 +81,7 @@ describe('read', () => {
             date,
             text: 'text',
             tags: ['a', 'b'],
+            user: expect.any(firestore.DocumentReference),
         })
     })
 })
@@ -80,6 +93,7 @@ describe('write', () => {
             date,
             text: 'text',
             tags: ['a', 'b'],
+            user: userDoc(),
         })
 
         expect(await docData()).toEqual({
@@ -87,6 +101,7 @@ describe('write', () => {
             date: firestore.Timestamp.fromDate(date.toDate()),
             text: 'text',
             tags: ['a', 'b'],
+            user: expect.any(firestore.DocumentReference),
         })
     })
 
@@ -96,6 +111,7 @@ describe('write', () => {
             date: firestore.FieldValue.serverTimestamp(),
             text: 'text',
             tags: ['a', 'b'],
+            user: userDoc(),
         })
 
         expect(await docData()).toEqual({
@@ -103,6 +119,7 @@ describe('write', () => {
             date: expect.any(firestore.Timestamp),
             text: 'text',
             tags: ['a', 'b'],
+            user: expect.any(firestore.DocumentReference),
         })
     })
 
@@ -117,6 +134,7 @@ describe('write', () => {
             date: firestore.Timestamp.fromDate(date.toDate()),
             text: 'new-text',
             tags: ['a', 'b'],
+            user: expect.any(firestore.DocumentReference),
         })
     })
 
@@ -131,6 +149,7 @@ describe('write', () => {
             date: firestore.Timestamp.fromDate(date.toDate()),
             text: 'new-text',
             tags: ['a', 'b'],
+            user: expect.any(firestore.DocumentReference),
         })
     })
 })

@@ -16,7 +16,7 @@ export const blue = <P extends t.Props>(type: t.TypeC<P>) => {
             return undefined
         }
 
-        return result.value as ExcludeFieldValue<(typeof type)['_A']>
+        return result.value as ExcludeFieldValue<t.TypeC<P>>
     }
 
     const fn = (doc: firestore.DocumentReference | admin.DocumentReference) => ({
@@ -25,12 +25,12 @@ export const blue = <P extends t.Props>(type: t.TypeC<P>) => {
             return ss(snapshot)
         },
 
-        set: async (data: (typeof type)['_A']) => doc.set(type.encode(data)),
+        set: async (data: t.TypeOf<typeof type>) => doc.set(type.encode(data)),
 
-        setMerge: async (data: (typeof partial)['_A']) =>
+        setMerge: async (data: t.TypeOf<typeof partial>) =>
             doc.set(partial.encode(data), { merge: true }),
 
-        update: async (data: (typeof partial)['_A']) => doc.update(partial.encode(data)),
+        update: async (data: t.TypeOf<typeof partial>) => doc.update(partial.encode(data)),
     })
 
     return Object.assign(fn, {
