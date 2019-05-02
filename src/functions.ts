@@ -1,12 +1,15 @@
 import { PathReporter, t } from '@yarnaimo/rain'
-import { https, region } from 'firebase-functions'
+import { FunctionBuilder, https, region } from 'firebase-functions'
 
-export const onCall = <T1 extends t.TypeC<any>, T2 extends t.TypeC<any>>(
+export const createOnCallFn = (functionBuilder: FunctionBuilder) => <
+    T1 extends t.Type<any>,
+    T2 extends t.Type<any>
+>(
     reqType: T1,
     resType: T2,
     handler: (data: t.TypeOf<T1>, context: https.CallableContext) => Promise<t.TypeOf<T2>>,
 ) => {
-    const requestHandler = region('asia-northeast1').https.onCall((data, context) => {
+    const requestHandler = functionBuilder.https.onCall((data, context) => {
         const req = reqType.decode(data)
 
         if (req.isLeft()) {
@@ -26,3 +29,5 @@ export const onCall = <T1 extends t.TypeC<any>, T2 extends t.TypeC<any>>(
 
     return typedHandler
 }
+
+export const onCall = createOnCallFn(region('asia-northeast1'))

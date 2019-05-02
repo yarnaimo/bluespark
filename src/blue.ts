@@ -33,5 +33,11 @@ export const blue = <P extends t.Props>(type: t.TypeC<P>) => {
         update: async (data: (typeof partial)['_A']) => doc.update(partial.encode(data)),
     })
 
-    return Object.assign(fn, { ss }) as typeof fn & { ss: typeof ss }
+    return Object.assign(fn, {
+        ss,
+        type,
+    }) as typeof fn & {
+        ss: typeof ss
+        type: typeof type
+    }
 }
