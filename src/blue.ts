@@ -1,7 +1,7 @@
 import { t } from '@yarnaimo/rain'
 import { admin, firestore, FirestoreFieldValue } from './firestore'
 
-type ExcludeFieldValue<T> = {
+export type ExcludeFieldValue<T> = {
     [K in keyof T]: ExcludeFieldValue<Exclude<T[K], FirestoreFieldValue>>
 }
 
