@@ -16,7 +16,7 @@ export const blue = <P extends t.Props>(type: t.TypeC<P>) => {
             return undefined
         }
 
-        return result.value as ExcludeFieldValue<t.TypeC<P>>
+        return result.value as ExcludeFieldValue<t.TypeOf<typeof type>>
     }
 
     const fn = (doc: firestore.DocumentReference | admin.DocumentReference) => ({
