@@ -1,18 +1,35 @@
-import { FirestoreTest } from '@yarnaimo/firebase-testing'
 import { dayjs, t } from '@yarnaimo/rain'
-import { blue } from '../blue'
-import { firestore } from '../firestore'
+import { expectType } from 'tsd'
+import { blue, ExcludeFieldValue } from '../blue'
+import { firestore, FirestoreDocumentReference } from '../firestore'
 import { DayjsFromFirestoreTimestamp } from '../types/DayjsFromFirestoreTimestamp'
 import { FieldValue } from '../types/FieldValue'
 import { DocumentReference } from './../types/DocumentReference'
+import { getProvider } from './provider'
 
-const provider = new FirestoreTest('bluespark-test')
 let db: firestore.Firestore
 
 const path = 'doc-path'
 const date = dayjs()
 
-const doc = () => db.collection('posts').doc(path)
+const provider = getProvider()
+
+beforeEach(() => {
+    db = provider.getFirestoreWithAuth()
+})
+
+const Post = blue(
+    'posts',
+    t.type({
+        id: t.number,
+        date: t.union([DayjsFromFirestoreTimestamp, FieldValue]),
+        text: t.string,
+        tags: t.array(t.string),
+        user: DocumentReference,
+    }),
+)
+
+const doc = () => Post.within(db).doc(path)
 const userDoc = () => db.collection('users').doc(path)
 
 const docData = () =>
@@ -34,25 +51,6 @@ const setUser = () =>
         name: 'imo',
     })
 
-beforeEach(async () => {
-    provider.next()
-    db = provider.getFirestoreWithAuth()
-})
-
-afterEach(async () => {
-    await provider.cleanup()
-})
-
-const Post = blue(
-    t.type({
-        id: t.number,
-        date: t.union([DayjsFromFirestoreTimestamp, FieldValue]),
-        text: t.string,
-        tags: t.array(t.string),
-        user: DocumentReference,
-    }),
-)
-
 describe('read', () => {
     beforeEach(async () => {
         await setUser()
@@ -61,6 +59,14 @@ describe('read', () => {
 
     test('get', async () => {
         const post = await Post(doc()).get()
+
+        expectType<{
+            id: number
+            date: ExcludeFieldValue<dayjs.Dayjs>
+            text: string
+            tags: string[]
+            user: FirestoreDocumentReference
+        }>(post)
 
         expect(post).toEqual({
             id: 17,
@@ -75,6 +81,14 @@ describe('read', () => {
         const post = await doc()
             .get()
             .then(Post.ss)
+
+        expectType<{
+            id: number
+            date: ExcludeFieldValue<dayjs.Dayjs>
+            text: string
+            tags: string[]
+            user: FirestoreDocumentReference
+        }>(post)
 
         expect(post).toEqual({
             id: 17,

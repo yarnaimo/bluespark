@@ -22,10 +22,10 @@ firebase.initializeApp({
 })
 
 const db = firebase.firestore()
-const posts = db.collection('posts')
 
 // Schema
 const Post = blue(
+    'posts',
     t.type({
         id: t.number,
         date: t.union([DayjsFromFirestoreTimestamp, FieldValue]), // Dayjs or FieldValue
@@ -33,6 +33,8 @@ const Post = blue(
         tags: t.array(t.string),
     }),
 )
+
+const posts = Post.within(db) // equivalent to `db.collection('posts')`
 ```
 
 ### get

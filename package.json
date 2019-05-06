@@ -22,7 +22,8 @@
     "@yarnaimo/firebase-testing": "latest",
     "@yarnaimo/tss": "latest",
     "firebase-admin": "^7.3.0",
-    "firebase-functions": "^2.3.0"
+    "firebase-functions": "^2.3.0",
+    "tsd": "^0.7.2"
   },
   "peerDependencies": {
     "firebase": "^5.10.1"

@@ -1,43 +1,58 @@
-import { t } from '@yarnaimo/rain'
-import { admin, firestore, FirestoreFieldValue } from './firestore'
+import { PathReporter, t } from '@yarnaimo/rain'
+import {
+    FirestoreDocumentReference,
+    FirestoreDocumentSnapshot,
+    FirestoreFieldValue,
+    FirestoreRoot,
+} from './firestore'
 
 export type ExcludeFieldValue<T> = {
     [K in keyof T]: ExcludeFieldValue<Exclude<T[K], FirestoreFieldValue>>
 }
 
-export const blue = <P extends t.Props>(type: t.TypeC<P>) => {
-    const partial = t.partial(type.props)
+export const blue = <P extends t.Props, ACS extends t.TypeC<any>[] = [t.TypeC<P>]>(
+    name: string,
+    codec: t.TypeC<P> | t.PartialC<P>,
+    ACodecs?: ACS,
+) => {
+    ACodecs
+    type AC_T = t.TypeOf<ACS[number]>
 
-    const ss = (snapshot: firestore.DocumentSnapshot | admin.DocumentSnapshot) => {
+    const partial = t.partial(codec.props)
+
+    const ss = (snapshot: FirestoreDocumentSnapshot) => {
         const data = snapshot.data()
-        const result = type.decode(data as any)
 
-        if (result.isLeft()) {
+        const result = codec.decode(data as any)
+
+        return result.mapLeft(() => {
+            console.error(PathReporter.report(result))
             return undefined
-        }
-
-        return result.value as ExcludeFieldValue<t.TypeOf<typeof type>>
+        }).value as ExcludeFieldValue<AC_T>
     }
 
-    const fn = (doc: firestore.DocumentReference | admin.DocumentReference) => ({
+    const within = <A extends FirestoreRoot | FirestoreDocumentReference>(a: A) =>
+        a.collection(name) as ReturnType<A['collection']>
+
+    const base = {
+        codec: codec as t.TypeC<P>,
+        _A: (codec as t.TypeC<P>)._A,
+        within,
+        ss,
+    }
+
+    const fn = (doc: FirestoreDocumentReference) => ({
         get: async () => {
             const snapshot = await doc.get()
             return ss(snapshot)
         },
 
-        set: async (data: t.TypeOf<typeof type>) => doc.set(type.encode(data)),
+        set: async (data: AC_T) => doc.set(codec.encode(data)),
 
-        setMerge: async (data: t.TypeOf<typeof partial>) =>
-            doc.set(partial.encode(data), { merge: true }),
+        setMerge: async (data: Partial<AC_T>) => doc.set(partial.encode(data), { merge: true }),
 
-        update: async (data: t.TypeOf<typeof partial>) => doc.update(partial.encode(data)),
+        update: async (data: Partial<AC_T>) => doc.update(partial.encode(data)),
     })
 
-    return Object.assign(fn, {
-        ss,
-        type,
-    }) as typeof fn & {
-        ss: typeof ss
-        type: typeof type
-    }
+    return Object.assign(fn, base) as typeof fn & typeof base
 }
