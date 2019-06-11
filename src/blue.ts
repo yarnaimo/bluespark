@@ -6,9 +6,13 @@ import {
     FirestoreRoot,
 } from './firestore'
 
-export type ExcludeFieldValue<T> = {
-    [K in keyof T]: ExcludeFieldValue<Exclude<T[K], FirestoreFieldValue>>
-}
+export type ExcludeFieldValue<T> = { [K in keyof T]: NonFieldValue<T[K]> }
+
+export type NonFieldValue<V> = V extends {}
+    ? V extends (...args: any[]) => any
+        ? V
+        : ExcludeFieldValue<Exclude<V, FirestoreFieldValue>>
+    : V
 
 export const blue = <P extends t.Props, ACS extends t.TypeC<any>[] = [t.TypeC<P>]>(
     name: string,
