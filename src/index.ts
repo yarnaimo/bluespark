@@ -1,6 +1,5 @@
 export { dayjs, t, tr, tt } from '@yarnaimo/rain'
 export { blue } from './blue'
-export { createOnCallFn, onCall } from './functions'
 export { DayjsFromFirestoreTimestamp } from './types/DayjsFromFirestoreTimestamp'
 export { DocumentReference } from './types/DocumentReference'
 export { FieldValue } from './types/FieldValue'

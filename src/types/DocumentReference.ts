@@ -1,5 +1,5 @@
 import { t } from '@yarnaimo/rain'
-import { FirestoreDocumentReference } from '../firestore'
+import { FirestoreDocumentReference } from '../firestore-types'
 
 const is = (u: unknown): u is FirestoreDocumentReference =>
     typeof u === 'object' && u !== null && 'collection' in u

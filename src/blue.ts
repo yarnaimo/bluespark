@@ -4,7 +4,7 @@ import {
     FirestoreDocumentSnapshot,
     FirestoreFieldValue,
     FirestoreRoot,
-} from './firestore'
+} from './firestore-types'
 
 export type ExcludeFieldValue<T> = { [K in keyof T]: NonFieldValue<T[K]> }
 
