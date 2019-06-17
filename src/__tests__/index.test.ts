@@ -67,7 +67,7 @@ describe('read', () => {
             text: string
             tags: string[]
             user: FirestoreDocumentReference
-        }>(post)
+        }>(post!)
 
         expect(post).toEqual({
             id: 17,
@@ -89,7 +89,7 @@ describe('read', () => {
             text: string
             tags: string[]
             user: FirestoreDocumentReference
-        }>(post)
+        }>(post!)
 
         expect(post).toEqual({
             id: 17,

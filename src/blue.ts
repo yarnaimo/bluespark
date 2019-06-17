@@ -32,7 +32,7 @@ export const blue = <P extends t.Props, ACS extends t.TypeC<any>[] = [t.TypeC<P>
         return result.mapLeft(() => {
             console.error(PathReporter.report(result))
             return undefined
-        }).value as ExcludeFieldValue<AC_T>
+        }).value as ExcludeFieldValue<AC_T> | undefined
     }
 
     const within = <A extends FirestoreRoot | FirestoreDocumentReference>(a: A) =>
