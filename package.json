@@ -19,16 +19,17 @@
     "@yarnaimo/rain": "^0.3.0"
   },
   "devDependencies": {
-    "@yarnaimo/firebase-testing": "latest",
+    "@firebase/testing": "^0.11.4",
+    "@yarnaimo/firebase-testing": "^0.0.6",
     "@yarnaimo/tss": "^0.1.10",
     "firebase": "^6.2.4",
     "firebase-admin": "^8.2.0",
-    "firebase-functions": "^3.0.2",
-    "tsd": "^0.7.3"
+    "firebase-functions": "^3.1.0",
+    "tsd": "^0.7.4"
   },
   "peerDependencies": {
     "firebase": "^6.2.4",
     "firebase-admin": "^8.2.0",
-    "firebase-functions": "^3.0.2"
+    "firebase-functions": "^3.1.0"
   }
 }

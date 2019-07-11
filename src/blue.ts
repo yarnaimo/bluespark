@@ -14,7 +14,10 @@ export type NonFieldValue<V> = V extends {}
         : ExcludeFieldValue<Exclude<V, FirestoreFieldValue>>
     : V
 
-export const blue = <P extends t.Props, ACS extends t.TypeC<any>[] = [t.TypeC<P>]>(
+export const blue = <
+    P extends t.Props,
+    ACS extends t.TypeC<any>[] = [t.TypeC<P>]
+>(
     name: string,
     codec: t.TypeC<P> | t.PartialC<P>,
     ACodecs?: ACS,
@@ -35,12 +38,13 @@ export const blue = <P extends t.Props, ACS extends t.TypeC<any>[] = [t.TypeC<P>
         }).value as ExcludeFieldValue<AC_T> | undefined
     }
 
-    const within = <A extends FirestoreRoot | FirestoreDocumentReference>(a: A) =>
-        a.collection(name) as ReturnType<A['collection']>
+    const within = <A extends FirestoreRoot | FirestoreDocumentReference>(
+        a: A,
+    ) => a.collection(name) as ReturnType<A['collection']>
 
     const base = {
         codec: codec as t.TypeC<P>,
-        _A: (codec as t.TypeC<P>)._A,
+        _A: codec._A as AC_T,
         within,
         ss,
     }
@@ -53,7 +57,8 @@ export const blue = <P extends t.Props, ACS extends t.TypeC<any>[] = [t.TypeC<P>
 
         set: async (data: AC_T) => doc.set(codec.encode(data)),
 
-        setMerge: async (data: Partial<AC_T>) => doc.set(partial.encode(data), { merge: true }),
+        setMerge: async (data: Partial<AC_T>) =>
+            doc.set(partial.encode(data), { merge: true }),
 
         update: async (data: Partial<AC_T>) => doc.update(partial.encode(data)),
     })
