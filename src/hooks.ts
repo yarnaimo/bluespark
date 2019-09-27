@@ -25,8 +25,8 @@ export const useDoc = <M extends Spark<'web', any, any>>(
 export const useQuery = <M extends Spark<'web', any, any>>(
     model?: M,
     queryFn: QueryFn<'web'> = c => c,
-) => {
-    const empty = [[], undefined] as const
+): readonly [M['_D'][], firebase.firestore.QuerySnapshot | undefined] => {
+    const empty = [[] as M['_D'][], undefined] as const
 
     if (!model) {
         return empty
@@ -44,9 +44,7 @@ export const useQuery = <M extends Spark<'web', any, any>>(
     return useMemo(
         () =>
             querySnapshot
-                ? (_model._querySnap(
-                      querySnapshot as Blue.QuerySnapshot['web'],
-                  ) as [M['_D'][], firebase.firestore.QuerySnapshot])
+                ? _model._querySnap(querySnapshot as Blue.QuerySnapshot['web'])
                 : empty,
         [querySnapshot],
     )
