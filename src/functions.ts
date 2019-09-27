@@ -1,33 +1,32 @@
-import { PathReporter, t } from '@yarnaimo/rain'
-import { FunctionBuilder, https, region } from 'firebase-functions'
+// import { PathReporter, t } from '@yarnaimo/rain'
 
-export const createOnCallFn = (functionBuilder: FunctionBuilder) => <
-    T1 extends t.Type<any>,
-    T2 extends t.Type<any>
->(
-    reqType: T1,
-    resType: T2,
-    handler: (data: t.TypeOf<T1>, context: https.CallableContext) => Promise<t.TypeOf<T2>>,
-) => {
-    const requestHandler = functionBuilder.https.onCall((data, context) => {
-        const req = reqType.decode(data)
+// export const createOnCallFn = (functionBuilder: FunctionBuilder) => <
+//     T1 extends t.Type<any>,
+//     T2 extends t.Type<any>
+// >(
+//     reqType: T1,
+//     resType: T2,
+//     handler: (data: t.TypeOf<T1>, context: https.CallableContext) => Promise<t.TypeOf<T2>>,
+// ) => {
+//     const requestHandler = functionBuilder.https.onCall((data, context) => {
+//         const req = reqType.decode(data)
 
-        if (req.isLeft()) {
-            throw new https.HttpsError('invalid-argument', PathReporter.report(req).toString())
-        }
+//         if (req.isLeft()) {
+//             throw new https.HttpsError('invalid-argument', PathReporter.report(req).toString())
+//         }
 
-        return handler(req.value, context)
-    })
+//         return handler(req.value, context)
+//     })
 
-    const typedHandler = Object.assign(requestHandler, {
-        reqType,
-        resType,
-    }) as typeof requestHandler & {
-        reqType: T1
-        resType: T2
-    }
+//     const typedHandler = Object.assign(requestHandler, {
+//         reqType,
+//         resType,
+//     }) as typeof requestHandler & {
+//         reqType: T1
+//         resType: T2
+//     }
 
-    return typedHandler
-}
+//     return typedHandler
+// }
 
-export const onCall = createOnCallFn(region('asia-northeast1'))
+// export const onCall = createOnCallFn(region('asia-northeast1'))

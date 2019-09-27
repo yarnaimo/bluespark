@@ -1,6 +1,7 @@
 {
     "extends": "@yarnaimo/tss/tsconfig.json",
     "compilerOptions": {
+        "esModuleInterop": true,
         "outDir": "dist",
         "lib": ["dom", "dom.iterable", "es2018"],
         "baseUrl": ".",

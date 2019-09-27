@@ -1,4 +1,4 @@
-# BlueSpark
+# 𝘉𝘭𝘶𝘦𝘚𝘱𝘢𝘳𝘬
 
 > Firestore library for TypeScript using io-ts
 
@@ -11,48 +11,65 @@ yarn add firebase bluespark
 ## Usage
 
 ```ts
-import * as firebase from 'firebase'
-import * as t from 'io-ts'
-import { dayjs, blue, DayjsFromFirestoreTimestamp, FieldValue } from 'bluespark'
+import firebase from 'firebase'
+import { Blue, Spark } from 'bluespark'
 
-firebase.initializeApp({
+const app = firebase.initializeApp({
     apiKey: '### FIREBASE API KEY ###',
     authDomain: '### FIREBASE AUTH DOMAIN ###',
     projectId: '### CLOUD FIRESTORE PROJECT ID ###',
 })
 
-const db = firebase.firestore()
+const db = app.firestore()
 
 // Schema
-const Post = blue(
-    'posts',
-    t.type({
-        id: t.number,
-        date: t.union([DayjsFromFirestoreTimestamp, FieldValue]), // Dayjs or FieldValue
-        text: t.string,
-        tags: t.array(t.string),
-    }),
-)
 
-const posts = Post.within(db) // equivalent to `db.collection('posts')`
+type IPost = {
+    id: number
+    date: Dayjs | Blue.FieldValue
+    text: string
+    tags: string[]
+    user: Blue.DocReference
+}
+
+const Post = Spark<IPost>('posts', {
+    // automatically convert `Dayjs` object to `Date` on write
+    encoder: deepConvert<dayjs.Dayjs, Date>(dayjs.isDayjs, a => a.toDate()),
+
+    // automatically convert `Timestamp` to `Dayjs` on read
+    decoder: deepConvert<Blue.Timestamp, dayjs.Dayjs>(isTimestamp, a =>
+        dayjs(a.toDate()),
+    ),
+})
+
+// equivalent to `db.collection('posts')`
+const postCl = Post.collectionWithin(db)
 ```
 
 ### get
 
 ```ts
-const post = await Post(posts.doc('doc-path')).get()
+const postRef = postCl.doc('doc-path')
+
+const post = await Post.ref(postRef).get()
+/* {
+    id: number
+    date: Dayjs
+    text: string
+    tags: string[]
+    user: Blue.DocReference
+} */
 
 // from snapshot
-const post = await posts
-    .doc('doc-path')
-    .get()
-    .then(Post.ss)
+const post = await postRef.get().then(Post.snap)
 ```
 
 ### set, setMerge, update
 
 ```ts
-await Post(posts.doc('doc-path')).set({
+const postRef = postCl.doc('doc-path')
+
+await Post.ref(postRef).set({
     id: 17,
     date: dayjs(),
     text: 'text',
