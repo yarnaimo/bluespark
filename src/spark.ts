@@ -1,262 +1,313 @@
-import { Dayjs } from 'dayjs'
-import { firestore } from 'firebase/app'
-import { Class } from 'type-fest'
-import { Blue, MP, Platforms } from './blue-types'
-import { DeepExclude, getFieldValueClass, PlainObject } from './utils'
+import { firestore as BlueA } from 'firebase-admin'
+import { Blue } from './blue-types'
+import { getFieldValueClass } from './utils'
 
-export type SparkDoc<T extends PlainObject> = {
-    _createdAt: Dayjs | Blue.FieldValue['union']
-    _updatedAt: Dayjs | Blue.FieldValue['union']
-} & T
+// export type Decoded<T extends BlueObject> = DeepExclude<
+//     T & Meta,
+//     Blue.FieldValue | Date
+// >
 
-export type Decoded<T extends PlainObject> = DeepExclude<
-    SparkDoc<T>,
-    Blue.FieldValue['union']
->
-
-export type DecodedWithRefs<
-    P extends Platforms,
-    T extends PlainObject,
-    L extends Leaf<P, any>
-> = { _id: string; _leaf: L; _docSnapshot: Blue.DocSnapshot[P] } & Decoded<T>
-
-export type Decoder<T extends PlainObject> = (
-    docData: NonNullable<Blue.DocData['union']>,
-) => Partial<Decoded<T>>
-
-export type Encoder<T extends PlainObject> = (
-    data: Partial<T>,
-) => NonNullable<Blue.DocData['union']>
-
-// export type Snap<
-//     P extends Platforms,
-//     ST extends PlainObject,
-//     L extends Leaf<P, any>
-// > = Decoded<ST> | undefined
-
-// export type QuerySnap<
-//     P extends Platforms,
-//     ST extends PlainObject,
-//     L extends Leaf<P, any>
-// > = [
-//     {
-//         data: Decoded<ST>
-//         leaf: L
-//         docSnapshot: Blue.DocSnapshot[P]
-//     }[],
-//     Blue.QuerySnapshot[P],
-// ]
-
-export const MPModel = <
-    W extends Spark<'web', any, any>,
-    A extends Spark<'admin', any, any>
->(
-    web: W,
-    admin: A,
+export const withMeta = (
+    action: 'create' | 'update',
+    docRef: Blue.DocRef,
+    data: Blue.DocData,
 ) => {
+    const FieldValueClass = getFieldValueClass(docRef.firestore)
+
+    if (action === 'create') {
+        return {
+            _createdAt: FieldValueClass.serverTimestamp(),
+            _updatedAt: FieldValueClass.serverTimestamp(),
+            ...data,
+        }
+    } else {
+        return {
+            _updatedAt: FieldValueClass.serverTimestamp(),
+            ...data,
+        }
+    }
+}
+
+export type SparkModel<I extends Blue.Interface<any>> = {
+    decode: Blue.Decoder<I>
+    create: (
+        docRef: Blue.DocRef,
+        data: I['_E'],
+    ) => Promise<void | BlueA.WriteResult>
+    update: (
+        docRef: Blue.DocRef,
+        data: Partial<I['_E']>,
+    ) => Promise<void | BlueA.WriteResult>
+}
+
+export const Spark = <I extends Blue.Interface<any>>(): SparkModel<I> => {
+    const decode = (snapshot: Blue.DocSnapshot) => {
+        if (!snapshot.exists) {
+            return undefined as any
+        }
+
+        return {
+            ...snapshot.data()!,
+            _id: snapshot.id,
+        }
+    }
+
+    const create = (docRef: Blue.DocRef, data: I['_E']) =>
+        docRef.set(withMeta('create', docRef, data))
+
+    const update = (docRef: Blue.DocRef, data: Partial<I['_E']>) =>
+        docRef.update(withMeta('update', docRef, data))
+
     return {
-        w: web,
-        a: admin,
-        as: <P extends Platforms>() => web as MP<W, A>[P],
+        decode,
+        create,
+        update,
     }
 }
 
-export type QueryFn<P extends Platforms> = (
-    collectionRef: Blue.CollectionRef[P],
-) => Blue.Query[P]
+// export type DecodedWithRefs<
+//     P extends Platforms,
+//     T extends PlainObject,
+//     L extends Leaf<P, any>
+// > = { _id: string; _leaf: L; _docSnapshot: Blue.DocSnapshot[P] } & Decoded<T>
 
-export abstract class Spark<
-    P extends Platforms,
-    T extends PlainObject,
-    L extends Leaf<P, T>
-> {
-    abstract path: string
-    abstract decoder: Decoder<T>
-    abstract encoder: Encoder<T>
-    abstract _LeafClass: Class<L>
+// export type Decoder<T extends PlainObject> = (
+//     docData: NonNullable<Blue.DocData['union']>,
+// ) => Partial<Decoded<T>>
 
-    _P!: P
-    _T!: T
-    _L!: L
-    _D!: DecodedWithRefs<P, T, L>
+// export type Encoder<T extends PlainObject> = (
+//     data: Partial<T>,
+// ) => NonNullable<Blue.DocData['union']>
 
-    // abstract leaf<DR extends Blue.DocRef>(docRef: DR): L
+// // export type Snap<
+// //     P extends Platforms,
+// //     ST extends PlainObject,
+// //     L extends Leaf<P, any>
+// // > = Decoded<ST> | undefined
 
-    // static in<P extends Platforms>(
-    //     this: Class<Spark<P, any, any>>,
-    //     parent: Blue.Firestore[P] | Blue.DocRef[P],
-    // ) {
-    //     const collection = new this(parent)
-    //     collection
-    // }
+// // export type QuerySnap<
+// //     P extends Platforms,
+// //     ST extends PlainObject,
+// //     L extends Leaf<P, any>
+// // > = [
+// //     {
+// //         data: Decoded<ST>
+// //         leaf: L
+// //         docSnapshot: Blue.DocSnapshot[P]
+// //     }[],
+// //     Blue.QuerySnapshot[P],
+// // ]
 
-    // get collectionRef() {
-    //     return this.options.collectionGroup
-    //         ? (this.options.parent.collectionGroup(this.path) as Blue.Query[P])
-    //         : (this.options.parent.collection(
-    //               this.path,
-    //           ) as Blue.CollectionRef[P])
-    // }
+// export const MPModel = <
+//     W extends Spark<'web', any, any>,
+//     A extends Spark<'admin', any, any>
+// >(
+//     web: W,
+//     admin: A,
+// ) => {
+//     return {
+//         w: web,
+//         a: admin,
+//         as: <P extends Platforms>() => web as MP<W, A>[P],
+//     }
+// }
 
-    get ref() {
-        return this.parent.collection(this.path) as Blue.CollectionRef[P]
-    }
+// export type QueryFn<P extends Platforms> = (
+//     collectionRef: Blue.CollectionRef[P],
+// ) => Blue.Query[P]
 
-    constructor(
-        public platform: P,
-        public parent: Blue.Firestore[P] | Blue.DocRef[P],
-    ) {}
+// export abstract class Spark<
+//     P extends Platforms,
+//     T extends PlainObject,
+//     L extends Leaf<P, T>
+// > {
+//     abstract path: string
+//     abstract decoder: Decoder<T>
+//     abstract encoder: Encoder<T>
+//     abstract _LeafClass: Class<L>
 
-    // collectionIn(parent: Blue.Firestore[P] | Blue.DocRef[P]) {
-    //     return parent.collection(this.path) as Blue.CollectionRef[P]
-    // }
+//     _P!: P
+//     _T!: T
+//     _L!: L
+//     _D!: DecodedWithRefs<P, T, L>
 
-    // collectionGroupIn(parent: Blue.Firestore[P]) {
-    //     return parent.collectionGroup(this.path) as Blue.Query[P]
-    // }
+//     // abstract leaf<DR extends Blue.DocRef>(docRef: DR): L
 
-    get FieldValueClass() {
-        return getFieldValueClass(this.ref.firestore)
-    }
+//     // static in<P extends Platforms>(
+//     //     this: Class<Spark<P, any, any>>,
+//     //     parent: Blue.Firestore[P] | Blue.DocRef[P],
+//     // ) {
+//     //     const collection = new this(parent)
+//     //     collection
+//     // }
 
-    _encode(data: Partial<T>, action: 'create' | 'update') {
-        const timeStamps = {
-            _updatedAt: this.FieldValueClass.serverTimestamp(),
-            ...(action === 'create'
-                ? { _createdAt: this.FieldValueClass.serverTimestamp() }
-                : {}),
-        }
+//     // get collectionRef() {
+//     //     return this.options.collectionGroup
+//     //         ? (this.options.parent.collectionGroup(this.path) as Blue.Query[P])
+//     //         : (this.options.parent.collection(
+//     //               this.path,
+//     //           ) as Blue.CollectionRef[P])
+//     // }
 
-        const encodedData = this.encoder(data)
-        return {
-            ...timeStamps,
-            ...encodedData,
-        }
-    }
+//     get ref() {
+//         return this.parent.collection(this.path) as Blue.CollectionRef[P]
+//     }
 
-    _decode(docSnapshot?: Blue.DocSnapshot[P]): this['_D'] | undefined {
-        if (!docSnapshot) {
-            return undefined
-        }
+//     constructor(
+//         public platform: P,
+//         public parent: Blue.Firestore[P] | Blue.DocRef[P],
+//     ) {}
 
-        const docData = docSnapshot.data()
-        if (!docData) {
-            return undefined
-        }
+//     // collectionIn(parent: Blue.Firestore[P] | Blue.DocRef[P]) {
+//     //     return parent.collection(this.path) as Blue.CollectionRef[P]
+//     // }
 
-        const decodedData = this.decoder(docData) as Decoded<T>
-        return {
-            ...decodedData,
-            _id: docSnapshot.id,
-            _leaf: this.leaf(docSnapshot.id),
-            _docSnapshot: docSnapshot,
-        }
-    }
+//     // collectionGroupIn(parent: Blue.Firestore[P]) {
+//     //     return parent.collectionGroup(this.path) as Blue.Query[P]
+//     // }
 
-    leaf(docId?: string): L {
-        return new this._LeafClass(
-            this,
-            docId ? this.ref.doc(docId) : this.ref.doc(),
-        )
-    }
+//     get FieldValueClass() {
+//         return getFieldValueClass(this.ref.firestore)
+//     }
 
-    // async snap<ST extends T = T>(
-    //     docRef: Blue.DocRef[P],
-    // ): Promise<Snap<P, ST, L>> {
-    //     const docSnapshot = (await docRef.get()) as Blue.DocSnapshot[P]
-    //     return this._snap(docSnapshot)
-    // }
+//     _encode(data: Partial<T>, action: 'create' | 'update') {
+//         const timeStamps = {
+//             _updatedAt: this.FieldValueClass.serverTimestamp(),
+//             ...(action === 'create'
+//                 ? { _createdAt: this.FieldValueClass.serverTimestamp() }
+//                 : {}),
+//         }
 
-    async querySnap<ST extends T = T>(queryFn: QueryFn<P> = c => c) {
-        const queryRef = queryFn(this.ref)
-        const querySnapshot = (await queryRef.get()) as Blue.QuerySnapshot[P]
-        return this._querySnap(querySnapshot)
-    }
+//         const encodedData = this.encoder(data)
+//         return {
+//             ...timeStamps,
+//             ...encodedData,
+//         }
+//     }
 
-    // _snap<ST extends T = T>(docSnapshot: Blue.DocSnapshot[P]): Snap<P, ST, L> {
-    //     const data = docSnapshot.data()
-    //     const decodedData = data
-    //         ? (this.decoder(data) as Decoded<ST>)
-    //         : undefined
+//     _decode(docSnapshot?: Blue.DocSnapshot[P]): this['_D'] | undefined {
+//         if (!docSnapshot) {
+//             return undefined
+//         }
 
-    //     return {
-    //         data: decodedData,
-    //         leaf: this.leaf(docSnapshot.ref as Blue.DocRef[P]),
-    //         docSnapshot,
-    //     }
-    // }
+//         const docData = docSnapshot.data()
+//         if (!docData) {
+//             return undefined
+//         }
 
-    _querySnap<ST extends T = T>(querySnapshot: Blue.QuerySnapshot[P]) {
-        const docs = querySnapshot.docs as Blue.QueryDocSnapshot[P][]
+//         const decodedData = this.decoder(docData) as Decoded<T>
+//         return {
+//             ...decodedData,
+//             _id: docSnapshot.id,
+//             _leaf: this.leaf(docSnapshot.id),
+//             _docSnapshot: docSnapshot,
+//         }
+//     }
 
-        const decodedDataList = docs.map(
-            docSnapshot => this._decode(docSnapshot)!,
-        )
-        return [decodedDataList, querySnapshot] as const
-    }
-}
+//     leaf(docId?: string): L {
+//         return new this._LeafClass(
+//             this,
+//             docId ? this.ref.doc(docId) : this.ref.doc(),
+//         )
+//     }
 
-export class Leaf<P extends Platforms, T extends PlainObject> {
-    get FieldValueClass() {
-        return getFieldValueClass(this.ref.firestore)
-    }
+//     // async snap<ST extends T = T>(
+//     //     docRef: Blue.DocRef[P],
+//     // ): Promise<Snap<P, ST, L>> {
+//     //     const docSnapshot = (await docRef.get()) as Blue.DocSnapshot[P]
+//     //     return this._snap(docSnapshot)
+//     // }
 
-    constructor(public model: Spark<P, T, any>, public ref: Blue.DocRef[P]) {}
+//     async querySnap<ST extends T = T>(queryFn: QueryFn<P> = c => c) {
+//         const queryRef = queryFn(this.ref)
+//         const querySnapshot = (await queryRef.get()) as Blue.QuerySnapshot[P]
+//         return this._querySnap(querySnapshot)
+//     }
 
-    async get<ST extends T = T>() {
-        const docSnapshot = (await this.ref.get()) as Blue.DocSnapshot[P]
-        return this.model._decode(docSnapshot)
-    }
+//     // _snap<ST extends T = T>(docSnapshot: Blue.DocSnapshot[P]): Snap<P, ST, L> {
+//     //     const data = docSnapshot.data()
+//     //     const decodedData = data
+//     //         ? (this.decoder(data) as Decoded<ST>)
+//     //         : undefined
 
-    // async get<ST extends T = T>() {
-    //     const snapshot = await this.ref.get()
-    //     return this.SparkClass.snap(snapshot) as Snap<
-    //         ST,
-    //         Blue.DocSnapshot
-    //     >
-    // }
-    create(data: T) {
-        return this.ref.set(this.model._encode(data, 'create')) as Promise<
-            Blue.WriteResult[P]
-        >
-    }
-    update(data: Partial<T>) {
-        return this.ref.update(this.model._encode(data, 'update')) as Promise<
-            Blue.WriteResult[P]
-        >
-    }
-    delete() {
-        return this.ref.delete() as Promise<Blue.WriteResult[P]>
-    }
+//     //     return {
+//     //         data: decodedData,
+//     //         leaf: this.leaf(docSnapshot.ref as Blue.DocRef[P]),
+//     //         docSnapshot,
+//     //     }
+//     // }
 
-    async getTx(transaction: Blue.Transaction['union']) {
-        const snapshot = await transaction.get(this
-            .ref as Blue.DocRef['intersection'])
-        return this.model._decode(snapshot as Blue.DocSnapshot[P])
-    }
-    createTx(transaction: Blue.Transaction['union'], data: T) {
-        return transaction.set(
-            this.ref as Blue.DocRef['intersection'],
-            this.model._encode(data, 'create'),
-        ) as Blue.Transaction[P]
-    }
-    updateTx(transaction: Blue.Transaction['union'], data: Partial<T>) {
-        if (transaction instanceof firestore.Transaction) {
-            return transaction.update(
-                this.ref as Blue.DocRef['intersection'],
-                this.model._encode(data, 'update'),
-            ) as Blue.Transaction[P]
-        } else {
-            return transaction.update(
-                this.ref as Blue.DocRef['intersection'],
-                this.model._encode(data, 'update'),
-            ) as Blue.Transaction[P]
-        }
-    }
-    deleteTx(transaction: Blue.Transaction['union']) {
-        return transaction.delete(this.ref as Blue.DocRef['intersection'])
-    }
-}
+//     _querySnap<ST extends T = T>(querySnapshot: Blue.QuerySnapshot[P]) {
+//         const docs = querySnapshot.docs as Blue.QueryDocSnapshot[P][]
+
+//         const decodedDataList = docs.map(
+//             docSnapshot => this._decode(docSnapshot)!,
+//         )
+//         return [decodedDataList, querySnapshot] as const
+//     }
+// }
+
+// export class Leaf<P extends Platforms, T extends PlainObject> {
+//     get FieldValueClass() {
+//         return getFieldValueClass(this.ref.firestore)
+//     }
+
+//     constructor(public model: Spark<P, T, any>, public ref: Blue.DocRef[P]) {}
+
+//     async get<ST extends T = T>() {
+//         const docSnapshot = (await this.ref.get()) as Blue.DocSnapshot[P]
+//         return this.model._decode(docSnapshot)
+//     }
+
+//     // async get<ST extends T = T>() {
+//     //     const snapshot = await this.ref.get()
+//     //     return this.SparkClass.snap(snapshot) as Snap<
+//     //         ST,
+//     //         Blue.DocSnapshot
+//     //     >
+//     // }
+//     create(data: T) {
+//         return this.ref.set(this.model._encode(data, 'create')) as Promise<
+//             Blue.WriteResult[P]
+//         >
+//     }
+//     update(data: Partial<T>) {
+//         return this.ref.update(this.model._encode(data, 'update')) as Promise<
+//             Blue.WriteResult[P]
+//         >
+//     }
+//     delete() {
+//         return this.ref.delete() as Promise<Blue.WriteResult[P]>
+//     }
+
+//     async getTx(transaction: Blue.Transaction['union']) {
+//         const snapshot = await transaction.get(this
+//             .ref as Blue.DocRef['intersection'])
+//         return this.model._decode(snapshot as Blue.DocSnapshot[P])
+//     }
+//     createTx(transaction: Blue.Transaction['union'], data: T) {
+//         return transaction.set(
+//             this.ref as Blue.DocRef['intersection'],
+//             this.model._encode(data, 'create'),
+//         ) as Blue.Transaction[P]
+//     }
+//     updateTx(transaction: Blue.Transaction['union'], data: Partial<T>) {
+//         if (transaction instanceof firestore.Transaction) {
+//             return transaction.update(
+//                 this.ref as Blue.DocRef['intersection'],
+//                 this.model._encode(data, 'update'),
+//             ) as Blue.Transaction[P]
+//         } else {
+//             return transaction.update(
+//                 this.ref as Blue.DocRef['intersection'],
+//                 this.model._encode(data, 'update'),
+//             ) as Blue.Transaction[P]
+//         }
+//     }
+//     deleteTx(transaction: Blue.Transaction['union']) {
+//         return transaction.delete(this.ref as Blue.DocRef['intersection'])
+//     }
+// }
 
 // export const _Spark = <T extends PlainObject>({
 //     path,

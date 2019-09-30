@@ -1,31 +1,27 @@
-import dayjs, { Dayjs, isDayjs } from 'dayjs'
-import { expectType } from 'tsd'
-import { deepConvert } from '../utils'
+// test('deepReplace', () => {
+//     const replaceDayjsWithDate = deepConvert<Dayjs, Date>(isDayjs, value =>
+//         value.toDate(),
+//     )
 
-test('deepReplace', () => {
-    const replaceDayjsWithDate = deepConvert<Dayjs, Date>(isDayjs, value =>
-        value.toDate(),
-    )
+//     const date = dayjs()
 
-    const date = dayjs()
+//     const original = {
+//         key: 'value',
+//         date,
+//         child: { key: 'value', date },
+//     }
 
-    const original = {
-        key: 'value',
-        date,
-        child: { key: 'value', date },
-    }
+//     const replaced = replaceDayjsWithDate(original)
 
-    const replaced = replaceDayjsWithDate(original)
+//     expectType<{
+//         key: string
+//         date: Date
+//         child: { key: string; date: Date }
+//     }>(replaced)
 
-    expectType<{
-        key: string
-        date: Date
-        child: { key: string; date: Date }
-    }>(replaced)
-
-    expect(replaced).toEqual({
-        key: 'value',
-        date: date.toDate(),
-        child: { key: 'value', date: date.toDate() },
-    })
-})
+//     expect(replaced).toEqual({
+//         key: 'value',
+//         date: date.toDate(),
+//         child: { key: 'value', date: date.toDate() },
+//     })
+// })

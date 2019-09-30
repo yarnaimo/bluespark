@@ -1,44 +1,55 @@
-import dayjs, { Dayjs } from 'dayjs'
+import dayjs from 'dayjs'
 import { firestore } from 'firebase'
 import { expectType } from 'tsd'
-import { Blue, Platforms } from '../blue-types'
-import { Decoder, Encoder, Leaf, Spark, SparkDoc } from '../spark'
-import { _deepConvertDayjsToDate, _deepConvertTimestampToDayjs } from '../utils'
+import { Blue } from '../blue-types'
+import { Spark } from '../spark'
 import { getProvider } from './provider'
 
 const path = 'doc-path'
-const date = dayjs()
+const date = dayjs().toDate()
 
 const provider = getProvider()
 const getDB = () => provider.getFirestoreWithAuth()
 
-type IPost = {
+type IPost = Blue.Interface<{
     id: number
-    date: Dayjs | Blue.FieldValue['union']
+    date: Blue.IO<Blue.Timestamp, Date | Blue.FieldValue>
     text: string
     tags: string[]
-    user: Blue.DocRef['union']
+    user: Blue.DocRef
+}>
+type IPostDecoded = {
+    _createdAt: Blue.Timestamp
+    _updatedAt: Blue.Timestamp
+    _id: string
+    id: number
+    date: Blue.Timestamp
+    text: string
+    tags: string[]
+    user: Blue.DocRef
 }
 
-class PostModel<P extends Platforms> extends Spark<P, IPost, Leaf<P, IPost>> {
-    path = 'posts'
-    decoder: Decoder<IPost> = _deepConvertTimestampToDayjs
-    encoder: Encoder<IPost> = _deepConvertDayjsToDate
+const Post = Spark<IPost>()
 
-    _LeafClass = Leaf
-}
+// class PostModel<P extends Platforms> extends Spark<P, IPost, Leaf<P, IPost>> {
+//     path = 'posts'
+//     decoder: Decoder<IPost> = _deepConvertTimestampToDayjs
+//     encoder: Encoder<IPost> = _deepConvertDayjsToDate
 
-class UserModel<P extends Platforms> extends Spark<P, IPost, Leaf<P, IPost>> {
-    path = 'users'
-    decoder: Decoder<IPost> = a => a
-    encoder: Encoder<IPost> = a => a
+//     _LeafClass = Leaf
+// }
 
-    _LeafClass = Leaf
-}
+// class UserModel<P extends Platforms> extends Spark<P, IPost, Leaf<P, IPost>> {
+//     path = 'users'
+//     decoder: Decoder<IPost> = a => a
+//     encoder: Encoder<IPost> = a => a
+
+//     _LeafClass = Leaf
+// }
 
 const getCollections = (db: firestore.Firestore) => {
-    const postC = new PostModel('web', db)
-    const userC = new UserModel('web', db)
+    const postC = db.collection('posts')
+    const userC = db.collection('posts')
     return { postC, userC }
 }
 // const getDocRefs = (db: firestore.Firestore) => {
@@ -86,74 +97,63 @@ describe('read', () => {
     test('get', async () => {
         const db = getDB()
         const { postC, userC } = getCollections(db)
-        await userC.ref.doc(path).set(userDocData)
-        await postC.ref.doc(path).set({
-            id: 17,
-            date: date.toDate(),
-            text: 'text',
-            tags: ['a', 'b'],
-            user: userC.ref.doc(path),
-        })
-
-        //
-
-        const post = await postC.leaf(path).get()
-
-        expectType<
-            | SparkDoc<IPost> & {
-                  _id: string
-                  _leaf: Leaf<'web', IPost>
-                  _docSnapshot: Blue.DocSnapshot['web']
-              }
-            | undefined
-        >(post)
-
-        expect(post).toMatchObject({
-            _id: path,
-            _leaf: expect.any(Leaf),
-            _docSnapshot: expect.any(firestore.DocumentSnapshot),
+        await userC.doc(path).set(userDocData)
+        await postC.doc(path).set({
             id: 17,
             date,
             text: 'text',
             tags: ['a', 'b'],
+            user: userC.doc(path),
         })
-        expect(post!.user).toBeInstanceOf(firestore.DocumentReference)
+
+        // start
+
+        const postSnapshot = await postC.doc(path).get()
+        const post = Post.decode(postSnapshot)!
+
+        // end
+
+        expectType<IPostDecoded>(post)
+
+        expect(post).toMatchObject({
+            _id: path,
+            id: 17,
+            date: firestore.Timestamp.fromDate(date),
+            text: 'text',
+            tags: ['a', 'b'],
+        })
+        expect(post.user).toBeInstanceOf(firestore.DocumentReference)
     })
 
-    test('get - querySnap', async () => {
+    test('get - query', async () => {
         const db = getDB()
         const { postC, userC } = getCollections(db)
-        await userC.ref.doc(path).set(userDocData)
-        await postC.ref.doc(path).set({
-            id: 17,
-            date: date.toDate(),
-            text: 'text',
-            tags: ['a', 'b'],
-            user: userC.ref.doc(path),
-        })
-
-        //
-
-        const [[post], snapshot] = await postC.querySnap(c => c.limit(5))
-
-        expectType<
-            SparkDoc<IPost> & {
-                _id: string
-                _leaf: Leaf<'web', IPost>
-                _docSnapshot: Blue.DocSnapshot['web']
-            }
-        >(post)
-
-        expect(post).toMatchObject({
-            _id: path,
-            _leaf: expect.any(Leaf),
-            _docSnapshot: expect.any(firestore.DocumentSnapshot),
+        await userC.doc(path).set(userDocData)
+        await postC.doc(path).set({
             id: 17,
             date,
             text: 'text',
             tags: ['a', 'b'],
+            user: userC.doc(path),
         })
-        expect(post!.user).toBeInstanceOf(firestore.DocumentReference)
+
+        // start
+
+        const { docs } = await postC.get()
+        const [post] = docs.map(doc => Post.decode(doc))
+
+        // end
+
+        expectType<IPostDecoded>(post)
+
+        expect(post).toMatchObject({
+            _id: path,
+            id: 17,
+            date: firestore.Timestamp.fromDate(date),
+            text: 'text',
+            tags: ['a', 'b'],
+        })
+        expect(post.user).toBeInstanceOf(firestore.DocumentReference)
     })
 })
 
@@ -161,17 +161,20 @@ describe('write', () => {
     test('create', async () => {
         const db = getDB()
         const { postC, userC } = getCollections(db)
-        await postC.leaf(path).create({
+
+        // start
+
+        await Post.create(postC.doc(path), {
             id: 17,
             date,
             text: 'text',
             tags: ['a', 'b'],
-            user: userC.ref.doc(path),
+            user: userC.doc(path),
         })
 
-        //
+        // end
 
-        const docData = await postC.ref
+        const docData = await postC
             .doc(path)
             .get()
             .then(snap => snap.data())
@@ -180,7 +183,7 @@ describe('write', () => {
             _createdAt: expect.any(firestore.Timestamp),
             _updatedAt: expect.any(firestore.Timestamp),
             id: 17,
-            date: firestore.Timestamp.fromDate(date.toDate()),
+            date: firestore.Timestamp.fromDate(date),
             text: 'text',
             tags: ['a', 'b'],
         })
@@ -190,17 +193,20 @@ describe('write', () => {
     test('create - serverTimestamp', async () => {
         const db = getDB()
         const { postC, userC } = getCollections(db)
-        await postC.leaf(path).create({
+
+        // start
+
+        await Post.create(postC.doc(path), {
             id: 17,
             date: firestore.FieldValue.serverTimestamp(),
             text: 'text',
             tags: ['a', 'b'],
-            user: userC.ref.doc(path),
+            user: userC.doc(path),
         })
 
-        //
+        // end
 
-        const docData = await postC.ref
+        const docData = await postC
             .doc(path)
             .get()
             .then(snap => snap.data())
@@ -246,55 +252,57 @@ describe('write', () => {
     test('update', async () => {
         const db = getDB()
         const { postC, userC } = getCollections(db)
-        await postC.ref.doc(path).set({
+        await postC.doc(path).set({
             id: 17,
-            date: date.toDate(),
+            date,
             text: 'text',
             tags: ['a', 'b'],
-            user: userC.ref.doc(path),
+            user: userC.doc(path),
         })
 
-        //
+        // start
 
-        await postC.leaf(path).update({
+        await Post.update(postC.doc(path), {
             text: 'new-text',
         })
 
-        const docData = await postC.ref
+        const docData = await postC
             .doc(path)
             .get()
             .then(snap => snap.data())
 
+        // end
+
         expect(docData).toMatchObject({
             _updatedAt: expect.any(firestore.Timestamp),
             id: 17,
-            date: firestore.Timestamp.fromDate(date.toDate()),
+            date: firestore.Timestamp.fromDate(date),
             text: 'new-text',
             tags: ['a', 'b'],
         })
         expect(docData!.user).toBeInstanceOf(firestore.DocumentReference)
     })
 
-    test('delete', async () => {
-        const db = getDB()
-        const { postC, userC } = getCollections(db)
-        await postC.ref.doc(path).set({
-            id: 17,
-            date: date.toDate(),
-            text: 'text',
-            tags: ['a', 'b'],
-            user: userC.ref.doc(path),
-        })
+    // test('delete', async () => {
+    //     const db = getDB()
+    //     const { postC, userC } = getCollections(db)
+    //     await postC.ref.doc(path).set({
+    //         id: 17,
+    //         date: date.toDate(),
+    //         text: 'text',
+    //         tags: ['a', 'b'],
+    //         user: userC.ref.doc(path),
+    //     })
 
-        //
+    //     //
 
-        await postC.leaf(path).delete()
+    //     await postC.leaf(path).delete()
 
-        const docData = await postC.ref
-            .doc(path)
-            .get()
-            .then(snap => snap.data())
+    //     const docData = await postC.ref
+    //         .doc(path)
+    //         .get()
+    //         .then(snap => snap.data())
 
-        expect(docData).toBeUndefined()
-    })
+    //     expect(docData).toBeUndefined()
+    // })
 })
