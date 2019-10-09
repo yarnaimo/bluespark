@@ -14,7 +14,7 @@ let _BlueAdmin: typeof BlueA
 
 const getBlueAdmin = () => {
     if (!_BlueAdmin) {
-        _BlueAdmin = require('firebase-admin')
+        _BlueAdmin = require('firebase-admin').firestore
     }
     return _BlueAdmin
 }
