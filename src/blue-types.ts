@@ -1,5 +1,5 @@
-import { firestore as BlueW } from 'firebase'
 import { firestore as BlueA } from 'firebase-admin'
+import { firestore as BlueW } from 'firebase/app'
 import { Opaque } from 'type-fest'
 
 export namespace Blue {
@@ -7,6 +7,7 @@ export namespace Blue {
         _createdAt: Blue.Timestamp
         _updatedAt: Blue.Timestamp
         _id: string
+        _ref: Blue.DocRef
     }
 
     export type IO<Decoded, ToEncode> = Opaque<{
@@ -28,10 +29,10 @@ export namespace Blue {
         _E: IOConverted<T, 'toEncode'>
     }
 
-    export type Decoder<I extends Blue.Interface<any>> = {
-        (snapshot: Blue.QueryDocSnapshot): I['_D']
-        (snapshot: Blue.DocSnapshot): I['_D'] | undefined
-    }
+    // export type Decoder<I extends Blue.Interface<any>> = {
+    //     (snapshot: Blue.QueryDocSnapshot): I['_D']
+    //     (snapshot: Blue.DocSnapshot): I['_D'] | undefined
+    // }
 
     export type FieldValueClass =
         | typeof BlueW.FieldValue
@@ -63,21 +64,9 @@ export namespace Blue {
         | BlueW.QueryDocumentSnapshot
         | BlueA.QueryDocumentSnapshot
 
-    export type QuerySnapshot = BlueW.QuerySnapshot | BlueA.QuerySnapshot
-    // export type QuerySnapshot = (PromiseReturnType<Query['get']>) & {
-    //     readonly docs: QueryDocSnapshot[]
-    // }
-
-    export type WriteResult = MP<void, BlueA.WriteResult>
-}
-
-export type Platforms = 'web' | 'admin'
-
-export type MP<Web, Admin> = {
-    web: Web
-    admin: Admin
-    union: Web | Admin
-    intersection: Web & Admin
+    export type QuerySnapshot = (BlueW.QuerySnapshot | BlueA.QuerySnapshot) & {
+        readonly docs: QueryDocSnapshot[]
+    }
 }
 
 export type BlueValue =
