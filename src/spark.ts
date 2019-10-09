@@ -3,7 +3,7 @@ import { firestore as BlueW } from 'firebase/app'
 import 'firebase/firestore'
 import { Blue } from './blue-types'
 
-// let _BlueAdmin: typeof BlueA
+let _BlueAdmin: typeof BlueA
 
 // try {
 //     _BlueAdmin = eval('require')('firebase-admin').firestore
@@ -12,13 +12,12 @@ import { Blue } from './blue-types'
 // //     ? require('firebase-admin')
 // //     : (global as any).__non_webpack_require__('firebase-admin')
 
-// // const getBlueAdmin = () => {
-// //     console.log('admin')
-// //     if (!_BlueAdmin) {
-// //         _BlueAdmin = (__non_webpack_require__ )('firebase-admin')
-// //     }
-// //     return _BlueAdmin
-// // }
+const getBlueAdmin = () => {
+    if (!_BlueAdmin) {
+        _BlueAdmin = require('firebase-admin')
+    }
+    return _BlueAdmin
+}
 
 export const withMeta = (
     action: 'create' | 'update',
@@ -28,7 +27,7 @@ export const withMeta = (
     const serverTimestamp =
         docRef instanceof BlueW.DocumentReference
             ? BlueW.FieldValue.serverTimestamp()
-            : BlueA.FieldValue.serverTimestamp()
+            : getBlueAdmin().FieldValue.serverTimestamp()
 
     delete data._id
     delete data._createdAt
