@@ -30,6 +30,7 @@ export const withMeta = (
             : getBlueAdmin().FieldValue.serverTimestamp()
 
     delete data._id
+    delete data._ref
     delete data._createdAt
     delete data._updatedAt
 
