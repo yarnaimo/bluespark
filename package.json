@@ -28,7 +28,7 @@
     "firebase": "^7.0.0",
     "firebase-admin": "^8.6.0",
     "firebase-functions": "^3.2.0",
-    "react": "^16.9.0",
+    "react": "^16.10.2",
     "tsd": "^0.8.0"
   },
   "peerDependencies": {

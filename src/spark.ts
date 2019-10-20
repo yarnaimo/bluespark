@@ -29,20 +29,22 @@ export const withMeta = (
             ? BlueW.FieldValue.serverTimestamp()
             : getBlueAdmin().FieldValue.serverTimestamp()
 
-    delete data._id
-    delete data._ref
-    delete data._createdAt
-    delete data._updatedAt
+    const copied = { ...data }
+
+    delete copied._id
+    delete copied._ref
+    delete copied._createdAt
+    delete copied._updatedAt
 
     if (action === 'create') {
         return {
-            ...data,
+            ...copied,
             _createdAt: serverTimestamp,
             _updatedAt: serverTimestamp,
         }
     } else {
         return {
-            ...data,
+            ...copied,
             _updatedAt: serverTimestamp,
         }
     }

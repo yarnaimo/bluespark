@@ -42,7 +42,7 @@ export namespace Blue {
     export type Ref = DocRef | CollectionRef
     export type FieldValue = BlueW.FieldValue | BlueA.FieldValue
     // export type FieldValue = Opaque<_FieldValue>
-    export type Date = Opaque<globalThis.Date>
+    // export type Date = Opaque<globalThis.Date>
     export type Timestamp = BlueW.Timestamp | BlueA.Timestamp
     export type Transaction = BlueW.Transaction | BlueA.Transaction
 

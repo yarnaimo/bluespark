@@ -1,17 +1,18 @@
-# 𝘉𝘭𝘶𝘦𝘚𝘱𝘢𝘳𝘬
+# BlueSpark
 
-> Firestore library for TypeScript using io-ts
+> Firestore library for TypeScript
 
 ## Installation
 
 ```sh
-yarn add firebase bluespark
+yarn add firebase firebase-admin bluespark
 ```
 
-## Usage
+## Initialization
 
 ```ts
-import firebase from 'firebase'
+import firebase, { firestore } from 'firebase/app'
+import 'firebase/firestore'
 import { Blue, Spark } from 'bluespark'
 
 const app = firebase.initializeApp({
@@ -20,59 +21,120 @@ const app = firebase.initializeApp({
     projectId: '### CLOUD FIRESTORE PROJECT ID ###',
 })
 
-const db = app.firestore()
+const dbInstance = app.firestore()
+```
 
-// Schema
+### Define collections
 
-type IPost = {
-    id: number
-    date: Dayjs | Blue.FieldValue
-    text: string
-    tags: string[]
-    user: Blue.DocReference
+```ts
+const createCollections = <F extends Blue.Firestore>(instance: F) => {
+    type C = ReturnType<F['collection']>
+    type Q = ReturnType<F['collectionGroup']>
+
+    return {
+        posts: () => instance.collection('posts') as C,
+    }
 }
 
-const Post = Spark<IPost>('posts', {
-    // automatically convert `Dayjs` object to `Date` on write
-    encoder: deepConvert<dayjs.Dayjs, Date>(dayjs.isDayjs, a => a.toDate()),
-
-    // automatically convert `Timestamp` to `Dayjs` on read
-    decoder: deepConvert<Blue.Timestamp, dayjs.Dayjs>(isTimestamp, a =>
-        dayjs(a.toDate()),
-    ),
-})
-
-// equivalent to `db.collection('posts')`
-const postCl = Post.collectionWithin(db)
+const collection = createCollections(dbInstance)
+// const collectionAdmin = createCollections(dbInstanceAdmin)
 ```
 
-### get
+### Define models
 
 ```ts
-const postRef = postCl.doc('doc-path')
-
-const post = await Post.ref(postRef).get()
-/* {
-    id: number
-    date: Dayjs
+type IPost = Blue.Interface<{
+    number: number
+    date: Blue.IO<Blue.Timestamp, Date | Blue.FieldValue>
     text: string
     tags: string[]
-    user: Blue.DocReference
-} */
+}>
 
-// from snapshot
-const post = await postRef.get().then(Post.snap)
+const Post = Spark<IPost>()
 ```
 
-### set, setMerge, update
+## Usage
+
+### Get document
 
 ```ts
-const postRef = postCl.doc('doc-path')
+const post = Post.decode(
+    await collection
+        .posts()
+        .doc('doc-id')
+        .get(),
+)
 
-await Post.ref(postRef).set({
-    id: 17,
-    date: dayjs(),
+// with React Hooks
+const { data: post, loading, error } = useSDoc(
+    Post,
+    collection.posts().doc('doc-id'),
+)
+
+// passes
+expectType<{
+    _createdAt: Blue.Timestamp
+    _updatedAt: Blue.Timestamp
+    _id: string
+    _ref: Blue.DocRef
+    number: number
+    date: Blue.Timestamp
+    text: string
+    tags: string[]
+}>(post!)
+```
+
+### Get collection/query
+
+```ts
+const { array, map } = Post.decodeQuerySnapshot(await collection.posts().get())
+
+// with React Hooks
+const { array, map, query, loading, error } = useSCollection(
+    Post,
+    collection.posts(),
+)
+
+// passes
+expectType<{
+    _createdAt: Blue.Timestamp
+    _updatedAt: Blue.Timestamp
+    _id: string
+    _ref: Blue.DocRef
+    number: number
+    date: Blue.Timestamp
+    text: string
+    tags: string[]
+}>(array[0])
+
+// passes
+expectType<{
+    _createdAt: Blue.Timestamp
+    _updatedAt: Blue.Timestamp
+    _id: string
+    _ref: Blue.DocRef
+    number: number
+    date: Blue.Timestamp
+    text: string
+    tags: string[]
+}>(map.get('doc-id')!)
+```
+
+### Create document
+
+```ts
+await Post.create(collection.posts().doc('doc-id'), {
+    number: 17,
+    date: firestore.FieldValue.serverTimestamp(), // Date | Blue.FieldValue
     text: 'text',
     tags: ['a', 'b'],
+})
+```
+
+### Update document
+
+```ts
+await Post.update(collection.posts().doc('doc-id'), {
+    text: 'new-text',
 })
 ```

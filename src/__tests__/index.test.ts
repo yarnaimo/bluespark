@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { firestore } from 'firebase'
+import { firestore as BlueW } from 'firebase/app'
 import { expectType } from 'tsd'
 import { Merge } from 'type-fest'
 import { Blue } from '../blue-types'
@@ -10,14 +10,14 @@ const path = 'doc-path'
 const date = dayjs().toDate()
 
 const provider = getProvider()
-let db: firestore.Firestore
+let db: BlueW.Firestore
 
 beforeEach(() => {
     db = provider.getFirestoreWithAuth()
 })
 
 type IPost = Blue.Interface<{
-    id: number
+    number: number
     date: Blue.IO<Blue.Timestamp, Date | Blue.FieldValue>
     text: string
     tags: string[]
@@ -27,7 +27,8 @@ type IPostDecoded = {
     _createdAt: Blue.Timestamp
     _updatedAt: Blue.Timestamp
     _id: string
-    id: number
+    _ref: Blue.DocRef
+    number: number
     date: Blue.Timestamp
     text: string
     tags: string[]
@@ -51,7 +52,7 @@ describe('read', () => {
         const { postC, userC } = getCollections()
         await userC.doc(path).set(userDocData)
         await postC.doc(path).set({
-            id: 17,
+            number: 17,
             date,
             text: 'text',
             tags: ['a', 'b'],
@@ -73,12 +74,13 @@ describe('read', () => {
 
         expect(post).toMatchObject({
             _id: path,
-            id: 17,
-            date: firestore.Timestamp.fromDate(date),
+            number: 17,
+            date: BlueW.Timestamp.fromDate(date),
             text: 'text',
             tags: ['a', 'b'],
         })
-        expect(post.user).toBeInstanceOf(firestore.DocumentReference)
+        expect(post._ref).toBeInstanceOf(BlueW.DocumentReference)
+        expect(post.user).toBeInstanceOf(BlueW.DocumentReference)
     })
 
     test('get - decodeQuerySnapshot - decoder', async () => {
@@ -87,30 +89,31 @@ describe('read', () => {
         // start
 
         const querySnapshot = await postC.get()
-        const { array: data, map } = Post.decodeQuerySnapshot(
+        const { array, map } = Post.decodeQuerySnapshot(
             querySnapshot,
             data => ({
                 ...data,
-                id: String(data.id),
+                number: String(data.number),
             }),
         )
 
         // end
 
-        const post = data[0]
+        const post = array[0]
         const postInMap = map.get(path)!
 
         ![post, postInMap].map(post => {
-            expectType<Merge<IPostDecoded, { id: string }>>(post)
+            expectType<Merge<IPostDecoded, { number: string }>>(post)
 
             expect(post).toMatchObject({
                 _id: path,
-                id: '17',
-                date: firestore.Timestamp.fromDate(date),
+                number: '17',
+                date: BlueW.Timestamp.fromDate(date),
                 text: 'text',
                 tags: ['a', 'b'],
             })
-            expect(post.user).toBeInstanceOf(firestore.DocumentReference)
+            expect(post._ref).toBeInstanceOf(BlueW.DocumentReference)
+            expect(post.user).toBeInstanceOf(BlueW.DocumentReference)
         })
     })
 
@@ -119,7 +122,7 @@ describe('read', () => {
     //     const { postC, userC } = getCollections(db)
     //     await userC.doc(path).set(userDocData)
     //     await postC.doc(path).set({
-    //         id: 17,
+    //         number: 17,
     //         date,
     //         text: 'text',
     //         tags: ['a', 'b'],
@@ -138,7 +141,7 @@ describe('read', () => {
 
     //     expect(post).toMatchObject({
     //         _id: path,
-    //         id: 17,
+    //         number: 17,
     //         date: firestore.Timestamp.fromDate(date),
     //         text: 'text',
     //         tags: ['a', 'b'],
@@ -154,7 +157,7 @@ describe('write', () => {
         // start
 
         await Post.create(postC.doc(path), {
-            id: 17,
+            number: 17,
             date,
             text: 'text',
             tags: ['a', 'b'],
@@ -169,14 +172,14 @@ describe('write', () => {
             .then(snap => snap.data())
 
         expect(docData).toMatchObject({
-            _createdAt: expect.any(firestore.Timestamp),
-            _updatedAt: expect.any(firestore.Timestamp),
-            id: 17,
-            date: firestore.Timestamp.fromDate(date),
+            _createdAt: expect.any(BlueW.Timestamp),
+            _updatedAt: expect.any(BlueW.Timestamp),
+            number: 17,
+            date: BlueW.Timestamp.fromDate(date),
             text: 'text',
             tags: ['a', 'b'],
         })
-        expect(docData!.user).toBeInstanceOf(firestore.DocumentReference)
+        expect(docData!.user).toBeInstanceOf(BlueW.DocumentReference)
     })
 
     test('create - serverTimestamp', async () => {
@@ -185,8 +188,8 @@ describe('write', () => {
         // start
 
         await Post.create(postC.doc(path), {
-            id: 17,
-            date: firestore.FieldValue.serverTimestamp(),
+            number: 17,
+            date: BlueW.FieldValue.serverTimestamp(),
             text: 'text',
             tags: ['a', 'b'],
             user: userC.doc(path),
@@ -200,20 +203,20 @@ describe('write', () => {
             .then(snap => snap.data())
 
         expect(docData).toMatchObject({
-            _createdAt: expect.any(firestore.Timestamp),
-            _updatedAt: expect.any(firestore.Timestamp),
-            id: 17,
-            date: expect.any(firestore.Timestamp),
+            _createdAt: expect.any(BlueW.Timestamp),
+            _updatedAt: expect.any(BlueW.Timestamp),
+            number: 17,
+            date: expect.any(BlueW.Timestamp),
             text: 'text',
             tags: ['a', 'b'],
         })
-        expect(docData!.user).toBeInstanceOf(firestore.DocumentReference)
+        expect(docData!.user).toBeInstanceOf(BlueW.DocumentReference)
     })
 
     test('update', async () => {
         const { postC, userC } = getCollections()
         await postC.doc(path).set({
-            id: 17,
+            number: 17,
             date,
             text: 'text',
             tags: ['a', 'b'],
@@ -234,12 +237,12 @@ describe('write', () => {
         // end
 
         expect(docData).toMatchObject({
-            _updatedAt: expect.any(firestore.Timestamp),
-            id: 17,
-            date: firestore.Timestamp.fromDate(date),
+            _updatedAt: expect.any(BlueW.Timestamp),
+            number: 17,
+            date: BlueW.Timestamp.fromDate(date),
             text: 'new-text',
             tags: ['a', 'b'],
         })
-        expect(docData!.user).toBeInstanceOf(firestore.DocumentReference)
+        expect(docData!.user).toBeInstanceOf(BlueW.DocumentReference)
     })
 })

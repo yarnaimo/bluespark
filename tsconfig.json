@@ -1,7 +1,6 @@
 {
     "extends": "@yarnaimo/tss/tsconfig.json",
     "compilerOptions": {
-        "esModuleInterop": true,
         "outDir": "dist",
         "lib": ["dom", "dom.iterable", "es2018"],
         "baseUrl": ".",
@@ -10,6 +9,6 @@
         },
         "types": ["@types/node", "@types/jest"]
     },
-    "include": ["src/**/*"],
+    "include": ["src"],
     "exclude": ["node_modules"]
 }
