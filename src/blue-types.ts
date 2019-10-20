@@ -10,12 +10,12 @@ export namespace Blue {
         _ref: Blue.DocRef
     }
 
-    export type IO<Decoded, ToEncode> = Opaque<{
-        decoded: Decoded
-        toEncode: ToEncode
+    export type IO<Read, Write> = Opaque<{
+        read: Read
+        write: Write
     }>
 
-    type IOConverted<O extends BlueObject, A extends 'decoded' | 'toEncode'> = {
+    type IOConverted<O extends BlueObject, A extends 'read' | 'write'> = {
         [K in keyof O]: O[K] extends Blue.IO<any, any>
             ? O[K][A]
             : O[K] extends BlueObject
@@ -25,8 +25,8 @@ export namespace Blue {
 
     export type Interface<T extends BlueObject> = {
         _A: T
-        _D: IOConverted<T & Meta, 'decoded'>
-        _E: IOConverted<T, 'toEncode'>
+        _D: IOConverted<T & Meta, 'read'>
+        _E: IOConverted<T, 'write'>
     }
 
     // export type Decoder<I extends Blue.Interface<any>> = {
