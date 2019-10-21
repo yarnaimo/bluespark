@@ -58,7 +58,7 @@ const Post = Spark<IPost>()
 ### Get document
 
 ```ts
-const post = await Post.get(collection.posts().doc('doc-id'))
+const post = await Post.getDoc(collection.posts().doc('doc-id'))
 
 // with React Hooks
 const { data: post, loading, error } = useSDoc(
