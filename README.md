@@ -58,12 +58,7 @@ const Post = Spark<IPost>()
 ### Get document
 
 ```ts
-const post = Post.decode(
-    await collection
-        .posts()
-        .doc('doc-id')
-        .get(),
-)
+const post = await Post.get(collection.posts().doc('doc-id'))
 
 // with React Hooks
 const { data: post, loading, error } = useSDoc(
@@ -87,7 +82,7 @@ expectType<{
 ### Get collection/query
 
 ```ts
-const { array, map } = Post.decodeQuerySnapshot(await collection.posts().get())
+const { array, map } = await Post.getCollection(collection.posts())
 
 // with React Hooks
 const { array, map, query, loading, error } = useSCollection(

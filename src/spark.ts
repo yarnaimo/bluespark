@@ -68,6 +68,16 @@ export type SparkModel<I extends Blue.Interface<any>> = {
         decoder?: (data: I['_D']) => T,
     ) => { array: T[]; map: Map<string, T> }
 
+    getDoc: <T = I['_D']>(
+        docRef: Blue.DocRef,
+        decoder?: (data: I['_D']) => T,
+    ) => Promise<T | undefined>
+
+    getCollection: <T = I['_D']>(
+        query: Blue.Query,
+        decoder?: (data: I['_D']) => T,
+    ) => Promise<{ array: T[]; map: Map<string, T> }>
+
     create: (
         docRef: Blue.DocRef,
         data: I['_E'],
@@ -80,7 +90,7 @@ export type SparkModel<I extends Blue.Interface<any>> = {
 }
 
 export const Spark = <I extends Blue.Interface<any>>(): SparkModel<I> => {
-    const decode: SparkModel<I>['decode'] = <T = I['_D']>(
+    const decode = <T = I['_D']>(
         snapshot: Blue.DocSnapshot,
         decoder: (data: I['_D']) => T = data => data,
     ) => {
@@ -95,9 +105,7 @@ export const Spark = <I extends Blue.Interface<any>>(): SparkModel<I> => {
         })
     }
 
-    const decodeQuerySnapshot: SparkModel<I>['decodeQuerySnapshot'] = <
-        T = I['_D']
-    >(
+    const decodeQuerySnapshot = <T = I['_D']>(
         { docs }: Blue.QuerySnapshot,
         decoder?: (data: I['_D']) => T,
     ) => {
@@ -113,6 +121,16 @@ export const Spark = <I extends Blue.Interface<any>>(): SparkModel<I> => {
         return { array, map }
     }
 
+    const getDoc = async <T = I['_D']>(
+        docRef: Blue.DocRef,
+        decoder: (data: I['_D']) => T = data => data,
+    ) => decode(await docRef.get(), decoder)
+
+    const getCollection = async <T = I['_D']>(
+        query: Blue.Query,
+        decoder: (data: I['_D']) => T = data => data,
+    ) => decodeQuerySnapshot(await query.get(), decoder)
+
     const create = (docRef: Blue.DocRef, data: I['_E']) =>
         docRef.set(withMeta('create', docRef, data))
 
@@ -122,6 +140,8 @@ export const Spark = <I extends Blue.Interface<any>>(): SparkModel<I> => {
     return {
         decode,
         decodeQuerySnapshot,
+        getDoc,
+        getCollection,
         create,
         update,
     }

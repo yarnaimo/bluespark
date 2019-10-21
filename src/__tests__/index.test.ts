@@ -65,8 +65,7 @@ describe('read', () => {
 
         // start
 
-        const postSnapshot = await postC.doc(path).get()
-        const post = Post.decode(postSnapshot)!
+        const post = (await Post.getDoc(postC.doc(path)))!
 
         // end
 
@@ -88,14 +87,10 @@ describe('read', () => {
 
         // start
 
-        const querySnapshot = await postC.get()
-        const { array, map } = Post.decodeQuerySnapshot(
-            querySnapshot,
-            data => ({
-                ...data,
-                number: String(data.number),
-            }),
-        )
+        const { array, map } = await Post.getCollection(postC, data => ({
+            ...data,
+            number: String(data.number),
+        }))
 
         // end
 
