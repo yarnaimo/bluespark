@@ -6,128 +6,66 @@ import {
     useDocument,
     useDocumentOnce,
 } from 'react-firebase-hooks/firestore'
-import { Blue } from './blue-types'
-import { SparkModel } from './spark'
+import { getDocRef, SparkQueryType, SparkType } from './spark'
 
-type Statuses = {
-    loading: boolean
-    error: Error | undefined
-}
-
-type UseSDoc = {
-    <I extends Blue.Interface<any>>(
-        model: SparkModel<I>,
-        ref: BlueW.DocumentReference,
-    ): Statuses & {
-        data: I['_D'] | undefined
-    }
-
-    <I extends Blue.Interface<any>, T>(
-        model: SparkModel<I>,
-        ref: BlueW.DocumentReference,
-        decoder: (data: I['_D']) => T,
-    ): Statuses & {
-        data: T | undefined
-    }
-}
-
-export const useSDoc: UseSDoc = <I extends Blue.Interface<any>, T = I['_D']>(
-    model: SparkModel<I>,
-    ref: BlueW.DocumentReference,
-    decoder?: (data: I['_D']) => T,
-) => {
-    const [snapshot, loading, error] = useDocument(ref)
-    const data = useMemo(() => snapshot && model.decode(snapshot, decoder), [
-        snapshot,
-        model,
-        decoder,
-    ])
-
-    return { data, loading, error }
-}
-
-export const useSDocOnce: UseSDoc = <
-    I extends Blue.Interface<any>,
-    T = I['_D']
+export const createUseDocument = (
+    _useDocument: typeof useDocument | typeof useDocumentOnce,
+) => <
+    S extends SparkType,
+    I extends S['__I__'] = S['__I__'],
+    DF extends ((data: I['_D']) => any) | undefined = undefined
 >(
-    model: SparkModel<I>,
-    ref: BlueW.DocumentReference,
-    decoder?: (data: I['_D']) => T,
+    S: S,
+    doc: BlueW.DocumentReference | string,
+    decoder?: DF,
 ) => {
-    const [snapshot, loading, error] = useDocumentOnce(ref)
-    const data = useMemo(() => snapshot && model.decode(snapshot, decoder), [
+    type D2 = DF extends Function ? ReturnType<DF> : I['_D']
+
+    const docRef = getDocRef(S._ref, doc) as BlueW.DocumentReference
+    const [snapshot, loading, error] = _useDocument(docRef)
+    const data = useMemo(() => snapshot && S._decode<D2>(snapshot, decoder), [
         snapshot,
-        model,
+        S,
         decoder,
     ])
 
     return { data, loading, error }
 }
 
-//
-
-type UseSCollection = {
-    <I extends Blue.Interface<any>>(
-        model: SparkModel<I>,
-        query: BlueW.Query,
-    ): Statuses & {
-        query: BlueW.Query
-        array: I['_D'][]
-        map: Map<string, I['_D']>
-    }
-
-    <I extends Blue.Interface<any>, T>(
-        model: SparkModel<I>,
-        query: BlueW.Query,
-        decoder: (data: I['_D']) => T,
-    ): Statuses & {
-        query: BlueW.Query
-        array: T[]
-        map: Map<string, T>
-    }
-}
+export const useSDoc = createUseDocument(useDocument)
+export const useSDocOnce = createUseDocument(useDocumentOnce)
 
 const emptyDocList = <T>() => ({
     array: [] as T[],
     map: new Map() as Map<string, T>,
 })
 
-export const useSCollection: UseSCollection = <
-    I extends Blue.Interface<any>,
-    T = I['_D']
+export const createUseCollection = (
+    _useCollection: typeof useCollection | typeof useCollectionOnce,
+) => <
+    S extends SparkQueryType,
+    I extends S['__I__'] = S['__I__'],
+    DF extends ((data: I['_D']) => any) | undefined = undefined
 >(
-    model: SparkModel<I>,
-    query: BlueW.Query,
-    decoder?: (data: I['_D']) => T,
+    S: S,
+    queryFn: (collection: BlueW.Query) => BlueW.Query = a => a,
+    decoder?: DF,
 ) => {
-    const [snapshot, loading, error] = useCollection(query)
+    type D2 = DF extends Function ? ReturnType<DF> : I['_D']
+
+    const [snapshot, loading, error] = _useCollection(
+        queryFn(S._ref as BlueW.CollectionReference),
+    )
     const { array, map } = useMemo(
         () =>
             snapshot
-                ? model.decodeQuerySnapshot(snapshot, decoder)
-                : emptyDocList<T>(),
-        [snapshot, model, decoder],
+                ? S._decodeQuerySnapshot<D2>(snapshot, decoder)
+                : emptyDocList<D2>(),
+        [snapshot, S, decoder],
     )
 
-    return { query, array, map, loading, error }
+    return { array, map, loading, error }
 }
 
-export const useSCollectionOnce: UseSCollection = <
-    I extends Blue.Interface<any>,
-    T = I['_D']
->(
-    model: SparkModel<I>,
-    query: BlueW.Query,
-    decoder?: (data: I['_D']) => T,
-) => {
-    const [snapshot, loading, error] = useCollectionOnce(query)
-    const { array, map } = useMemo(
-        () =>
-            snapshot
-                ? model.decodeQuerySnapshot(snapshot, decoder)
-                : emptyDocList<T>(),
-        [snapshot, model, decoder],
-    )
-
-    return { query, array, map, loading, error }
-}
+export const useSCollection = createUseCollection(useCollection)
+export const useSCollectionOnce = createUseCollection(useCollectionOnce)

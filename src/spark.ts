@@ -1,28 +1,23 @@
+import is from '@sindresorhus/is'
 import { firestore as BlueA } from 'firebase-admin'
 import { firestore as BlueW } from 'firebase/app'
 import 'firebase/firestore'
-import { Blue } from './blue-types'
+import { Blue as B } from './blue-types'
 
 let _BlueAdmin: typeof BlueA
-
-// try {
-//     _BlueAdmin = eval('require')('firebase-admin').firestore
-// } catch (error) {}
-// // typeof window !== 'undefined'
-// //     ? require('firebase-admin')
-// //     : (global as any).__non_webpack_require__('firebase-admin')
 
 const getBlueAdmin = () => {
     if (!_BlueAdmin) {
         _BlueAdmin = require('firebase-admin').firestore
     }
+
     return _BlueAdmin
 }
 
 export const withMeta = (
     action: 'create' | 'update',
-    docRef: Blue.DocRef,
-    data: Blue.DocData,
+    docRef: B.DocRef,
+    data: B.DocData,
 ) => {
     const serverTimestamp =
         docRef instanceof BlueW.DocumentReference
@@ -50,99 +45,136 @@ export const withMeta = (
     }
 }
 
-export type SparkModel<I extends Blue.Interface<any>> = {
-    decode: {
-        <T = I['_D']>(
-            snapshot: Blue.QueryDocSnapshot,
-            decoder?: (data: I['_D']) => T,
-        ): T
+export const getDocRef = (
+    collectionRef: B.CollectionRef,
+    doc: B.DocRef | string,
+) => (is.string(doc) ? collectionRef.doc(doc) : doc)
 
-        <T = I['_D']>(
-            snapshot: Blue.DocSnapshot,
-            decoder?: (data: I['_D']) => T,
-        ): T | undefined
-    }
+type PT<FR> = FR extends true ? B.Firestore : B.Firestore | B.DocRef
 
-    decodeQuerySnapshot: <T = I['_D']>(
-        querySnapshot: Blue.QuerySnapshot,
-        decoder?: (data: I['_D']) => T,
-    ) => { array: T[]; map: Map<string, T> }
-
-    getDoc: <T = I['_D']>(
-        docRef: Blue.DocRef,
-        decoder?: (data: I['_D']) => T,
-    ) => Promise<T | undefined>
-
-    getCollection: <T = I['_D']>(
-        query: Blue.Query,
-        decoder?: (data: I['_D']) => T,
-    ) => Promise<{ array: T[]; map: Map<string, T> }>
-
-    create: (
-        docRef: Blue.DocRef,
-        data: I['_E'],
-    ) => Promise<void | BlueA.WriteResult>
-
-    update: (
-        docRef: Blue.DocRef,
-        data: Partial<I['_E']>,
-    ) => Promise<void | BlueA.WriteResult>
-}
-
-export const Spark = <I extends Blue.Interface<any>>(): SparkModel<I> => {
-    const decode = <T = I['_D']>(
-        snapshot: Blue.DocSnapshot,
-        decoder: (data: I['_D']) => T = data => data,
+export const SparkQuery = <I extends B.Interface<any>>() => {
+    return <FR extends boolean, P extends PT<FR> = PT<FR>>(
+        onlyFromRoot: FR,
+        collectionFn: (parent: P) => B.Query,
     ) => {
-        if (!snapshot.exists) {
-            return undefined as any
+        type DecodeFn = {
+            <T = I['_D']>(
+                snapshot: B.QueryDocSnapshot,
+                decoder?: (data: I['_D']) => T,
+            ): T
+
+            <T = I['_D']>(
+                snapshot: B.DocSnapshot,
+                decoder?: (data: I['_D']) => T,
+            ): T | undefined
         }
 
-        return decoder({
-            ...snapshot.data()!,
-            _id: snapshot.id,
-            _ref: snapshot.ref,
-        })
-    }
+        const _decode: DecodeFn = <T = I['_D']>(
+            snapshot: B.DocSnapshot,
+            decoder: (data: I['_D']) => T = data => data,
+        ) => {
+            if (!snapshot.exists) {
+                return undefined as any
+            }
 
-    const decodeQuerySnapshot = <T = I['_D']>(
-        { docs }: Blue.QuerySnapshot,
-        decoder?: (data: I['_D']) => T,
-    ) => {
-        const array: I['_D'][] = []
-        const dataEntries: [string, I['_D']][] = []
-
-        for (const doc of docs) {
-            const decoded = decode(doc, decoder)
-            array.push(decoded)
-            dataEntries.push([doc.id, decoded])
+            return decoder({
+                ...snapshot.data()!,
+                _id: snapshot.id,
+                _ref: snapshot.ref,
+            })
         }
-        const map = new Map(dataEntries)
-        return { array, map }
-    }
 
-    const getDoc = async <T = I['_D']>(
-        docRef: Blue.DocRef,
-        decoder: (data: I['_D']) => T = data => data,
-    ) => decode(await docRef.get(), decoder)
+        const _decodeQuerySnapshot = <T = I['_D']>(
+            { docs }: B.QuerySnapshot,
+            decoder?: (data: I['_D']) => T,
+        ) => {
+            const array: T[] = []
+            const dataEntries: [string, T][] = []
 
-    const getCollection = async <T = I['_D']>(
-        query: Blue.Query,
-        decoder: (data: I['_D']) => T = data => data,
-    ) => decodeQuerySnapshot(await query.get(), decoder)
+            for (const doc of docs) {
+                const decoded = _decode(doc, decoder)
+                array.push(decoded)
+                dataEntries.push([doc.id, decoded])
+            }
+            const map = new Map(dataEntries)
+            return { array, map }
+        }
 
-    const create = (docRef: Blue.DocRef, data: I['_E']) =>
-        docRef.set(withMeta('create', docRef, data))
+        return <P2 extends P>(parent: P2) => {
+            type Query = ReturnType<ReturnType<P2['collection']>['where']>
+            const _ref = collectionFn(parent) as Query
 
-    const update = (docRef: Blue.DocRef, data: Partial<I['_E']>) =>
-        docRef.update(withMeta('update', docRef, data))
+            const getQuery = async <T = I['_D']>(
+                queryFn: (collection: Query) => B.Query = a => a,
+                decoder?: (data: I['_D']) => T,
+            ) => {
+                const querySnapshot = await queryFn(_ref).get()
+                return _decodeQuerySnapshot(querySnapshot, decoder)
+            }
 
-    return {
-        decode,
-        decodeQuerySnapshot,
-        getDoc,
-        getCollection,
-        create,
-        update,
+            return {
+                __I__: {} as I,
+                _decode,
+                _decodeQuerySnapshot,
+                _ref,
+                getQuery,
+            }
+        }
     }
 }
+
+export const Spark = <I extends B.Interface<any>>() => {
+    return <FR extends boolean, P extends PT<FR> = PT<FR>>(
+        onlyFromRoot: FR,
+        collectionFn: (parent: P) => B.CollectionRef,
+    ) => {
+        const _superCollection = SparkQuery<I>()(onlyFromRoot, collectionFn)
+
+        return <P2 extends P>(parent: P2) => {
+            type Collection = ReturnType<P2['collection']>
+            const _ref = collectionFn(parent) as Collection
+
+            const {
+                _decode,
+                _decodeQuerySnapshot,
+                getQuery,
+            } = _superCollection(parent)
+
+            const getDoc = async <T = I['_D']>(
+                id: string,
+                decoder?: (data: I['_D']) => T,
+            ) => {
+                const docRef = _ref.doc(id)
+                return _decode(await docRef.get(), decoder)
+            }
+
+            const create = (doc: B.DocRef | string, data: I['_E']) => {
+                const docRef = getDocRef(_ref, doc)
+
+                return docRef.set(withMeta('create', docRef, data))
+            }
+
+            const update = (doc: B.DocRef | string, data: Partial<I['_E']>) => {
+                const docRef = getDocRef(_ref as B.CollectionRef, doc)
+
+                return docRef.update(withMeta('update', docRef, data))
+            }
+
+            return {
+                __I__: {} as I,
+                _decode,
+                _decodeQuerySnapshot,
+                _ref,
+                getDoc,
+                getQuery,
+                create,
+                update,
+            }
+        }
+    }
+}
+
+export type SparkType = ReturnType<ReturnType<ReturnType<typeof Spark>>>
+export type SparkQueryType = ReturnType<
+    ReturnType<ReturnType<typeof SparkQuery>>
+>
