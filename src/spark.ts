@@ -47,8 +47,13 @@ export const withMeta = (
 
 export const getDocRef = (
     collectionRef: B.CollectionRef,
-    doc: B.DocRef | string,
-) => (is.string(doc) ? collectionRef.doc(doc) : doc)
+    doc: B.DocRef | string | null,
+) =>
+    is.null_(doc)
+        ? collectionRef.doc()
+        : is.string(doc)
+        ? collectionRef.doc(doc)
+        : doc
 
 type PT<FR> = FR extends true ? B.Firestore : B.Firestore | B.DocRef
 
@@ -148,7 +153,10 @@ export const Spark = <I extends B.Interface<any>>() => {
                 return _decode(await docRef.get(), decoder)
             }
 
-            const create = async (doc: B.DocRef | string, data: I['_E']) => {
+            const create = async (
+                doc: B.DocRef | string | null,
+                data: I['_E'],
+            ) => {
                 const dRef = getDocRef(cRef, doc)
 
                 return {
