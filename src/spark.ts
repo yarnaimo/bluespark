@@ -57,6 +57,15 @@ export const getDocRef = (
 
 type PT<FR> = FR extends true ? B.Firestore : B.Firestore | B.DocRef
 
+export type DFType<I extends B.Interface<any>> =
+    | ((data: I['_D']) => any)
+    | undefined
+
+export type DXType<
+    I extends B.Interface<any>,
+    DF extends DFType<I>
+> = DF extends Function ? ReturnType<DF> : I['_D']
+
 export const SparkQuery = <I extends B.Interface<any>>() => {
     return <FR extends boolean, P extends PT<FR> = PT<FR>>(
         onlyFromRoot: FR,
@@ -109,12 +118,15 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
             type Query = ReturnType<ReturnType<P2['collection']>['where']>
             const cRef = collectionFn(parent) as Query
 
-            const getQuery = async <T = I['_D']>(
+            const getQuery = async <DF extends DFType<I> = undefined>(
                 queryFn: (collection: Query) => B.Query = a => a,
-                decoder?: (data: I['_D']) => T,
+                decoder?: DF,
             ) => {
                 const querySnapshot = await queryFn(cRef).get()
-                return _decodeQuerySnapshot(querySnapshot, decoder)
+                return _decodeQuerySnapshot<DXType<I, DF>>(
+                    querySnapshot,
+                    decoder,
+                )
             }
 
             return {
@@ -145,12 +157,12 @@ export const Spark = <I extends B.Interface<any>>() => {
                 getQuery,
             } = _superCollection(parent)
 
-            const getDoc = async <T = I['_D']>(
+            const getDoc = async <DF extends DFType<I> = undefined>(
                 id: string,
-                decoder?: (data: I['_D']) => T,
+                decoder?: DF,
             ) => {
                 const docRef = cRef.doc(id)
-                return _decode(await docRef.get(), decoder)
+                return _decode<DXType<I, DF>>(await docRef.get(), decoder)
             }
 
             const create = async (

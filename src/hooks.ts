@@ -6,7 +6,7 @@ import {
     useDocument,
     useDocumentOnce,
 } from 'react-firebase-hooks/firestore'
-import { getDocRef, SparkQueryType, SparkType } from './spark'
+import { DFType, DXType, getDocRef, SparkQueryType, SparkType } from './spark'
 
 export const createUseDocument = (
     _useDocument: typeof useDocument | typeof useDocumentOnce,
@@ -14,18 +14,16 @@ export const createUseDocument = (
     return <
         S extends SparkType<any>,
         I extends S['__I__'] = S['__I__'],
-        DF extends ((data: I['_D']) => any) | undefined = undefined
+        DF extends DFType<I> = undefined
     >(
         S: S,
         doc: BlueW.DocumentReference | string,
         decoder?: DF,
     ) => {
-        type D2 = DF extends Function ? ReturnType<DF> : I['_D']
-
         const dRef = getDocRef(S.cRef, doc) as BlueW.DocumentReference
         const [snapshot, loading, error] = _useDocument(dRef)
         const data = useMemo(
-            () => snapshot && S._decode<D2>(snapshot, decoder),
+            () => snapshot && S._decode<DXType<I, DF>>(snapshot, decoder),
             [snapshot, S, decoder],
         )
 
@@ -47,22 +45,20 @@ export const createUseCollection = (
     return <
         S extends SparkQueryType<any>,
         I extends S['__I__'] = S['__I__'],
-        DF extends ((data: I['_D']) => any) | undefined = undefined
+        DF extends DFType<I> = undefined
     >(
         S: S,
         queryFn: (collection: BlueW.Query) => BlueW.Query = a => a,
         decoder?: DF,
     ) => {
-        type D2 = DF extends Function ? ReturnType<DF> : I['_D']
-
         const [snapshot, loading, error] = _useCollection(
             queryFn(S.cRef as BlueW.CollectionReference),
         )
         const { array, map } = useMemo(
             () =>
                 snapshot
-                    ? S._decodeQuerySnapshot<D2>(snapshot, decoder)
-                    : emptyDocList<D2>(),
+                    ? S._decodeQuerySnapshot<DXType<I, DF>>(snapshot, decoder)
+                    : emptyDocList<DXType<I, DF>>(),
             [snapshot, S, decoder],
         )
 
