@@ -57,7 +57,7 @@ const createCollections = <F extends Blue.Firestore>(db: F) => {
 
 const getCollections = () => {
     const collection = createCollections(db)
-    const userRef = collection.users()._ref.doc(id)
+    const userRef = collection.users().cRef.doc(id)
     const _posts = collection._postsIn(userRef)
     const gPosts = collection.gPosts()
 
@@ -69,7 +69,7 @@ describe('read', () => {
         const { userRef, _posts } = getCollections()
 
         // await userRef.set(userDocData)
-        await _posts._ref.doc(id).set({
+        await _posts.cRef.doc(id).set({
             number: 17,
             date,
             text: 'text',
@@ -82,7 +82,7 @@ describe('read', () => {
         const { userRef, _posts } = getCollections()
 
         expect(userRef.path).toBe('users/id')
-        expect(_posts._ref.path).toBe('users/id/posts')
+        expect(_posts.cRef.path).toBe('users/id/posts')
     })
 
     test('get', async () => {
@@ -176,7 +176,7 @@ describe('write', () => {
 
         // end
 
-        const docData = await _posts._ref
+        const docData = await _posts.cRef
             .doc(id)
             .get()
             .then(snap => snap.data())
@@ -207,7 +207,7 @@ describe('write', () => {
 
         // end
 
-        const docData = await _posts._ref
+        const docData = await _posts.cRef
             .doc(id)
             .get()
             .then(snap => snap.data())
@@ -226,7 +226,7 @@ describe('write', () => {
     test('update', async () => {
         const { userRef, _posts } = getCollections()
 
-        await _posts._ref.doc(id).set({
+        await _posts.cRef.doc(id).set({
             number: 17,
             date,
             text: 'text',
@@ -240,7 +240,7 @@ describe('write', () => {
             text: 'new-text',
         })
 
-        const docData = await _posts._ref
+        const docData = await _posts.cRef
             .doc(id)
             .get()
             .then(snap => snap.data())

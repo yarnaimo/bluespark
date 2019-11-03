@@ -102,13 +102,13 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
 
         return <P2 extends P>(parent: P2) => {
             type Query = ReturnType<ReturnType<P2['collection']>['where']>
-            const _ref = collectionFn(parent) as Query
+            const cRef = collectionFn(parent) as Query
 
             const getQuery = async <T = I['_D']>(
                 queryFn: (collection: Query) => B.Query = a => a,
                 decoder?: (data: I['_D']) => T,
             ) => {
-                const querySnapshot = await queryFn(_ref).get()
+                const querySnapshot = await queryFn(cRef).get()
                 return _decodeQuerySnapshot(querySnapshot, decoder)
             }
 
@@ -116,7 +116,7 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
                 __I__: {} as I,
                 _decode,
                 _decodeQuerySnapshot,
-                _ref,
+                cRef,
                 getQuery,
             }
         }
@@ -132,7 +132,7 @@ export const Spark = <I extends B.Interface<any>>() => {
 
         return <P2 extends P>(parent: P2) => {
             type Collection = ReturnType<P2['collection']>
-            const _ref = collectionFn(parent) as Collection
+            const cRef = collectionFn(parent) as Collection
 
             const {
                 _decode,
@@ -144,27 +144,36 @@ export const Spark = <I extends B.Interface<any>>() => {
                 id: string,
                 decoder?: (data: I['_D']) => T,
             ) => {
-                const docRef = _ref.doc(id)
+                const docRef = cRef.doc(id)
                 return _decode(await docRef.get(), decoder)
             }
 
-            const create = (doc: B.DocRef | string, data: I['_E']) => {
-                const docRef = getDocRef(_ref, doc)
+            const create = async (doc: B.DocRef | string, data: I['_E']) => {
+                const dRef = getDocRef(cRef, doc)
 
-                return docRef.set(withMeta('create', docRef, data))
+                return {
+                    dRef,
+                    result: await dRef.set(withMeta('create', dRef, data)),
+                }
             }
 
-            const update = (doc: B.DocRef | string, data: Partial<I['_E']>) => {
-                const docRef = getDocRef(_ref as B.CollectionRef, doc)
+            const update = async (
+                doc: B.DocRef | string,
+                data: Partial<I['_E']>,
+            ) => {
+                const dRef = getDocRef(cRef as B.CollectionRef, doc)
 
-                return docRef.update(withMeta('update', docRef, data))
+                return {
+                    dRef,
+                    result: await dRef.update(withMeta('update', dRef, data)),
+                }
             }
 
             return {
                 __I__: {} as I,
                 _decode,
                 _decodeQuerySnapshot,
-                _ref,
+                cRef,
                 getDoc,
                 getQuery,
                 create,

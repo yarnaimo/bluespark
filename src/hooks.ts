@@ -22,8 +22,8 @@ export const createUseDocument = (
     ) => {
         type D2 = DF extends Function ? ReturnType<DF> : I['_D']
 
-        const docRef = getDocRef(S._ref, doc) as BlueW.DocumentReference
-        const [snapshot, loading, error] = _useDocument(docRef)
+        const dRef = getDocRef(S.cRef, doc) as BlueW.DocumentReference
+        const [snapshot, loading, error] = _useDocument(dRef)
         const data = useMemo(
             () => snapshot && S._decode<D2>(snapshot, decoder),
             [snapshot, S, decoder],
@@ -56,7 +56,7 @@ export const createUseCollection = (
         type D2 = DF extends Function ? ReturnType<DF> : I['_D']
 
         const [snapshot, loading, error] = _useCollection(
-            queryFn(S._ref as BlueW.CollectionReference),
+            queryFn(S.cRef as BlueW.CollectionReference),
         )
         const { array, map } = useMemo(
             () =>
