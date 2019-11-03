@@ -174,7 +174,15 @@ export const Spark = <I extends B.Interface<any>>() => {
     }
 }
 
-export type SparkType = ReturnType<ReturnType<ReturnType<typeof Spark>>>
-export type SparkQueryType = ReturnType<
-    ReturnType<ReturnType<typeof SparkQuery>>
+export class __S__<I extends B.Interface<any>> {
+    Spark = Spark<I>()
+    SparkQuery = SparkQuery<I>()
+}
+
+export type SparkType<I extends B.Interface<any>> = ReturnType<
+    ReturnType<__S__<I>['Spark']>
+>
+
+export type SparkQueryType<I extends B.Interface<any>> = ReturnType<
+    ReturnType<__S__<I>['SparkQuery']>
 >
