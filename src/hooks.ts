@@ -15,16 +15,23 @@ export const createUseDocument = (
         S extends SparkType<any>,
         I extends S['__I__'] = S['__I__'],
         DF extends DFType<I> = undefined
-    >(
-        S: S,
-        doc: BlueW.DocumentReference | string,
-        decoder?: DF,
-    ) => {
-        const dRef = getDocRef(S.cRef, doc) as BlueW.DocumentReference
-        const [snapshot, loading, error] = _useDocument(dRef)
+    >({
+        model,
+        doc,
+        decoder,
+    }: {
+        model: S
+        doc: BlueW.DocumentReference | string
+        decoder?: DF
+    }) => {
+        const _ref = getDocRef(
+            model.collectionRef,
+            doc,
+        ) as BlueW.DocumentReference
+        const [snapshot, loading, error] = _useDocument(_ref)
         const data = useMemo(
-            () => snapshot && S._decode<DXType<I, DF>>(snapshot, decoder),
-            [snapshot, S, decoder],
+            () => snapshot && model._decode<DXType<I, DF>>(snapshot, decoder),
+            [snapshot, model, decoder],
         )
 
         return { data, loading, error }
@@ -34,11 +41,6 @@ export const createUseDocument = (
 export const useSDoc = createUseDocument(useDocument)
 export const useSDocOnce = createUseDocument(useDocumentOnce)
 
-const emptyDocList = <T>() => ({
-    array: [] as T[],
-    map: new Map() as Map<string, T>,
-})
-
 export const createUseCollection = (
     _useCollection: typeof useCollection | typeof useCollectionOnce,
 ) => {
@@ -46,23 +48,29 @@ export const createUseCollection = (
         S extends SparkQueryType<any>,
         I extends S['__I__'] = S['__I__'],
         DF extends DFType<I> = undefined
-    >(
-        S: S,
-        queryFn: (collection: BlueW.Query) => BlueW.Query = a => a,
-        decoder?: DF,
-    ) => {
-        const [snapshot, loading, error] = _useCollection(
-            queryFn(S.cRef as BlueW.CollectionReference),
-        )
-        const { array, map } = useMemo(
+    >({
+        model,
+        q = a => a,
+        decoder,
+    }: {
+        model: S
+        q?: (collection: BlueW.Query) => BlueW.Query
+        decoder?: DF
+    }) => {
+        const query = q(model.collectionRef as BlueW.CollectionReference)
+
+        const [querySnapshot, loading, error] = _useCollection(query)
+        const docs = useMemo(
             () =>
-                snapshot
-                    ? S._decodeQuerySnapshot<DXType<I, DF>>(snapshot, decoder)
-                    : emptyDocList<DXType<I, DF>>(),
-            [snapshot, S, decoder],
+                model._decodeQuerySnapshot<DXType<I, DF>>(
+                    query,
+                    querySnapshot,
+                    decoder,
+                ),
+            [querySnapshot, model, decoder],
         )
 
-        return { array, map, loading, error }
+        return { ...docs, loading, error }
     }
 }
 

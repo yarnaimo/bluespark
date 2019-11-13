@@ -67,10 +67,13 @@ export type DXType<
 > = DF extends Function ? ReturnType<DF> : I['_D']
 
 export const SparkQuery = <I extends B.Interface<any>>() => {
-    return <FR extends boolean, P extends PT<FR> = PT<FR>>(
-        onlyFromRoot: FR,
-        collectionFn: (parent: P) => B.Query,
-    ) => {
+    return <FR extends boolean, P extends PT<FR> = PT<FR>>({
+        root,
+        query,
+    }: {
+        root: FR
+        query: (parent: P) => B.Query
+    }) => {
         type DecodeFn = {
             <T = I['_D']>(
                 snapshot: B.QueryDocSnapshot,
@@ -99,31 +102,39 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
         }
 
         const _decodeQuerySnapshot = <T = I['_D']>(
-            { docs }: B.QuerySnapshot,
+            query: B.Query,
+            querySnapshot: B.QuerySnapshot | undefined,
             decoder?: (data: I['_D']) => T,
         ) => {
+            const docs = querySnapshot?.docs || []
+
             const array: T[] = []
-            const dataEntries: [string, T][] = []
+            const map = new Map<string, T>()
 
             for (const doc of docs) {
                 const decoded = _decode(doc, decoder)
                 array.push(decoded)
-                dataEntries.push([doc.id, decoded])
+                map.set(doc.id, decoded)
             }
-            const map = new Map(dataEntries)
-            return { array, map }
+            return { query, array, map }
         }
 
         return <P2 extends P>(parent: P2) => {
             type Query = ReturnType<ReturnType<P2['collection']>['where']>
-            const cRef = collectionFn(parent) as Query
+            const collectionRef = query(parent) as Query
 
-            const getQuery = async <DF extends DFType<I> = undefined>(
-                queryFn: (collection: Query) => B.Query = a => a,
-                decoder?: DF,
-            ) => {
-                const querySnapshot = await queryFn(cRef).get()
+            const getQuery = async <DF extends DFType<I> = undefined>({
+                q = a => a,
+                decoder,
+            }: {
+                q?: (collection: Query) => B.Query
+                decoder?: DF
+            }) => {
+                const queryRef = q(collectionRef)
+                const querySnapshot = await queryRef.get()
+
                 return _decodeQuerySnapshot<DXType<I, DF>>(
+                    queryRef,
                     querySnapshot,
                     decoder,
                 )
@@ -133,7 +144,7 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
                 __I__: {} as I,
                 _decode,
                 _decodeQuerySnapshot,
-                cRef,
+                collectionRef,
                 getQuery,
             }
         }
@@ -141,39 +152,50 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
 }
 
 export const Spark = <I extends B.Interface<any>>() => {
-    return <FR extends boolean, P extends PT<FR> = PT<FR>>(
-        onlyFromRoot: FR,
-        collectionFn: (parent: P) => B.CollectionRef,
-    ) => {
-        const _superCollection = SparkQuery<I>()(onlyFromRoot, collectionFn)
+    return <FR extends boolean, P extends PT<FR> = PT<FR>>({
+        root,
+        collection: collectionFn,
+    }: {
+        root: FR
+        collection: (parent: P) => B.CollectionRef
+    }) => {
+        const _superCollection = SparkQuery<I>()({
+            root,
+            query: collectionFn,
+        })
 
         return <P2 extends P>(parent: P2) => {
             type Collection = ReturnType<P2['collection']>
-            const cRef = collectionFn(parent) as Collection
 
             const {
                 _decode,
                 _decodeQuerySnapshot,
+                collectionRef: _collectionRef,
                 getQuery,
             } = _superCollection(parent)
 
-            const getDoc = async <DF extends DFType<I> = undefined>(
-                id: string,
-                decoder?: DF,
-            ) => {
-                const docRef = cRef.doc(id)
-                return _decode<DXType<I, DF>>(await docRef.get(), decoder)
+            const collectionRef = _collectionRef as Collection
+
+            const getDoc = async <DF extends DFType<I> = undefined>({
+                doc,
+                decoder,
+            }: {
+                doc: BlueW.DocumentReference | string
+                decoder?: DF
+            }) => {
+                const _ref = getDocRef(collectionRef, doc)
+                return _decode<DXType<I, DF>>(await _ref.get(), decoder)
             }
 
             const create = async (
                 doc: B.DocRef | string | null,
                 data: I['_E'],
             ) => {
-                const dRef = getDocRef(cRef, doc)
+                const _ref = getDocRef(collectionRef, doc)
 
                 return {
-                    dRef,
-                    result: await dRef.set(withMeta('create', dRef, data)),
+                    _ref,
+                    result: await _ref.set(withMeta('create', _ref, data)),
                 }
             }
 
@@ -181,11 +203,11 @@ export const Spark = <I extends B.Interface<any>>() => {
                 doc: B.DocRef | string,
                 data: Partial<I['_E']>,
             ) => {
-                const dRef = getDocRef(cRef as B.CollectionRef, doc)
+                const _ref = getDocRef(collectionRef as B.CollectionRef, doc)
 
                 return {
-                    dRef,
-                    result: await dRef.update(withMeta('update', dRef, data)),
+                    _ref,
+                    result: await _ref.update(withMeta('update', _ref, data)),
                 }
             }
 
@@ -193,7 +215,7 @@ export const Spark = <I extends B.Interface<any>>() => {
                 __I__: {} as I,
                 _decode,
                 _decodeQuerySnapshot,
-                cRef,
+                collectionRef,
                 getDoc,
                 getQuery,
                 create,

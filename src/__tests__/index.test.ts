@@ -12,10 +12,10 @@ const id = 'id'
 const date = dayjs().toDate()
 
 const provider = getProvider()
-let db: BlueW.Firestore
+let dbInstance: BlueW.Firestore
 
 beforeEach(() => {
-    db = provider.getFirestoreWithAuth()
+    dbInstance = provider.getFirestoreWithAuth()
 })
 
 type IUser = Blue.Interface<{ name: string }>
@@ -39,15 +39,25 @@ type IPostDecoded = {
     user: Blue.DocRef
 }
 
-const User = Spark<IUser>()(true, db => db.collection('users'))
-const Post = Spark<IPost>()(false, user => user.collection('posts'))
-const GPost = SparkQuery<IPost>()(true, user => user.collectionGroup('posts'))
+const User = Spark<IUser>()({
+    root: true,
+    collection: db => db.collection('users'),
+})
+
+const Post = Spark<IPost>()({
+    root: false,
+    collection: user => user.collection('posts'),
+})
+const GPost = SparkQuery<IPost>()({
+    root: true,
+    query: user => user.collectionGroup('posts'),
+})
 
 const createCollections = <F extends Blue.Firestore>(db: F) => {
     return {
-        users: () => User(db),
+        users: User(db),
         _postsIn: <D extends Blue.DocRef>(userRef: D) => Post(userRef),
-        gPosts: () => GPost(db),
+        gPosts: GPost(db),
     }
 }
 
@@ -56,10 +66,10 @@ const createCollections = <F extends Blue.Firestore>(db: F) => {
 // }
 
 const getCollections = () => {
-    const collection = createCollections(db)
-    const userRef = collection.users().cRef.doc(id)
-    const _posts = collection._postsIn(userRef)
-    const gPosts = collection.gPosts()
+    const db = createCollections(dbInstance)
+    const userRef = db.users.collectionRef.doc(id)
+    const _posts = db._postsIn(userRef)
+    const gPosts = db.gPosts
 
     return { userRef, _posts, gPosts }
 }
@@ -69,7 +79,7 @@ describe('read', () => {
         const { userRef, _posts } = getCollections()
 
         // await userRef.set(userDocData)
-        await _posts.cRef.doc(id).set({
+        await _posts.collectionRef.doc(id).set({
             number: 17,
             date,
             text: 'text',
@@ -82,7 +92,7 @@ describe('read', () => {
         const { userRef, _posts } = getCollections()
 
         expect(userRef.path).toBe('users/id')
-        expect(_posts.cRef.path).toBe('users/id/posts')
+        expect(_posts.collectionRef.path).toBe('users/id/posts')
     })
 
     test('get', async () => {
@@ -90,10 +100,10 @@ describe('read', () => {
 
         // start
 
-        const post1 = await _posts.getDoc(id)
+        const post1 = await _posts.getDoc({ doc: id })
 
         const { result, waitForNextUpdate } = renderHook(() =>
-            useSDoc(_posts, id),
+            useSDoc({ model: _posts, doc: id }),
         )
         await waitForNextUpdate()
         const {
@@ -120,7 +130,7 @@ describe('read', () => {
     test('get - decodeQuerySnapshot - decoder', async () => {
         const { userRef, _posts, gPosts } = getCollections()
 
-        const decoder = (data: typeof _posts['__I__']['_D']) => ({
+        const decoder = (data: IPost['_D']) => ({
             ...data,
             number: String(data.number),
         })
@@ -128,10 +138,10 @@ describe('read', () => {
         for (const posts of [_posts, gPosts]) {
             // start
 
-            const res1 = await posts.getQuery(undefined, decoder)
+            const res1 = await posts.getQuery({ q: undefined, decoder })
 
             const { result, waitForNextUpdate } = renderHook(() =>
-                useSCollection(posts, undefined, decoder),
+                useSCollection({ model: posts, q: undefined, decoder }),
             )
             await waitForNextUpdate()
             const { current: res2 } = result
@@ -176,7 +186,7 @@ describe('write', () => {
 
         // end
 
-        const docData = await _posts.cRef
+        const docData = await _posts.collectionRef
             .doc(id)
             .get()
             .then(snap => snap.data())
@@ -207,7 +217,7 @@ describe('write', () => {
 
         // end
 
-        const docData = await _posts.cRef
+        const docData = await _posts.collectionRef
             .doc(id)
             .get()
             .then(snap => snap.data())
@@ -226,7 +236,7 @@ describe('write', () => {
     test('update', async () => {
         const { userRef, _posts } = getCollections()
 
-        await _posts.cRef.doc(id).set({
+        await _posts.collectionRef.doc(id).set({
             number: 17,
             date,
             text: 'text',
@@ -240,7 +250,7 @@ describe('write', () => {
             text: 'new-text',
         })
 
-        const docData = await _posts.cRef
+        const docData = await _posts.collectionRef
             .doc(id)
             .get()
             .then(snap => snap.data())

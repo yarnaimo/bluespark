@@ -2,13 +2,13 @@
 
 > Firestore library for TypeScript
 
-## Installation
+## Install
 
 ```sh
 yarn add firebase firebase-admin bluespark
 ```
 
-## Initialization
+## Initialize
 
 ```ts
 import firebase, { firestore } from 'firebase/app'
@@ -24,25 +24,11 @@ const app = firebase.initializeApp({
 const dbInstance = app.firestore()
 ```
 
-### Define collections
-
-```ts
-const createCollections = <F extends Blue.Firestore>(instance: F) => {
-    type C = ReturnType<F['collection']>
-    type Q = ReturnType<F['collectionGroup']>
-
-    return {
-        posts: () => instance.collection('posts') as C,
-    }
-}
-
-const collection = createCollections(dbInstance)
-// const collectionAdmin = createCollections(dbInstanceAdmin)
-```
-
 ### Define models
 
 ```ts
+type IUser = Blue.Interface<{ name: string }>
+
 type IPost = Blue.Interface<{
     number: number
     date: Blue.IO<Blue.Timestamp, Date | Blue.FieldValue>
@@ -50,24 +36,53 @@ type IPost = Blue.Interface<{
     tags: string[]
 }>
 
-const Post = Spark<IPost>()
+// users
+const User = Spark<IUser>()({
+    root: true,
+    collection: db => db.collection('users'),
+})
+
+// users/{user}/posts
+const Post = Spark<IPost>()({
+    root: false,
+    collection: user => user.collection('posts'),
+})
+```
+
+### Define collections
+
+```ts
+const createCollections = <F extends Blue.Firestore>(db: F) => {
+    return {
+        users: User(db),
+        _postsIn: <D extends Blue.DocRef>(userRef: D) => Post(userRef),
+    }
+}
+
+const db = createCollections(dbInstance)
+const dbAdmin = createCollections(dbInstanceAdmin) // for admin
 ```
 
 ## Usage
 
-### Get document
+### Get document/query
 
 ```ts
-const post = await Post.getDoc(collection.posts().doc('doc-id'))
+// get `users/userId`
+const user = await db.users.getDoc({
+    doc: 'userId',
+})
 
-// with React Hooks
-const { data: post, loading, error } = useSDoc(
-    Post,
-    collection.posts().doc('doc-id'),
-)
+// get `users/userId/posts` where `number` field is greater than 3
+const _posts = await db._postsIn(user._ref).getQuery({
+    q: q => q.where('number', '>', 3),
+})
 
-// passes
-expectType<{
+const firstPost = _posts.array[0]
+const postA = _posts.map.get('postId')!
+
+// the type of `firstPost` and `postA` is as follows:
+type _ = {
     _createdAt: Blue.Timestamp
     _updatedAt: Blue.Timestamp
     _id: string
@@ -76,49 +91,38 @@ expectType<{
     date: Blue.Timestamp
     text: string
     tags: string[]
-}>(post!)
+}
+
+// convert data
+const _posts = await db._postsIn(user._ref).getQuery({
+    decoder: (post: IPost['_D']) => ({
+        ...post,
+        number: String(post.number),
+    }),
+})
+_posts.array[0].number // string
 ```
 
-### Get collection/query
+### Get document/query (with React Hooks)
 
 ```ts
-const { array, map } = await Post.getCollection(collection.posts())
+const { data: user, loading, error } = useSDoc({
+    model: db.users,
+    doc: 'userId',
+})
 
-// with React Hooks
-const { array, map, query, loading, error } = useSCollection(
-    Post,
-    collection.posts(),
-)
+const _posts = await useSCollection({
+    model: db._postsIn(user._ref),
+    q: q => q.where('number', '>', 3),
+})
 
-// passes
-expectType<{
-    _createdAt: Blue.Timestamp
-    _updatedAt: Blue.Timestamp
-    _id: string
-    _ref: Blue.DocRef
-    number: number
-    date: Blue.Timestamp
-    text: string
-    tags: string[]
-}>(array[0])
-
-// passes
-expectType<{
-    _createdAt: Blue.Timestamp
-    _updatedAt: Blue.Timestamp
-    _id: string
-    _ref: Blue.DocRef
-    number: number
-    date: Blue.Timestamp
-    text: string
-    tags: string[]
-}>(map.get('doc-id')!)
+const { array, map, query, loading, error } = _posts
 ```
 
 ### Create document
 
 ```ts
-await Post.create(collection.posts().doc('doc-id'), {
+await db._postsIn(user._ref).create('postId', {
     number: 17,
     date: firestore.FieldValue.serverTimestamp(), // Date | Blue.FieldValue
     text: 'text',
@@ -129,7 +133,7 @@ await Post.create(collection.posts().doc('doc-id'), {
 ### Update document
 
 ```ts
-await Post.update(collection.posts().doc('doc-id'), {
+await db._postsIn(user._ref).update('postId', {
     text: 'new-text',
 })
 ```
