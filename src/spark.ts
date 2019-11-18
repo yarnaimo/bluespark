@@ -2,6 +2,7 @@ import is from '@sindresorhus/is'
 import { firestore as BlueA } from 'firebase-admin'
 import { firestore as BlueW } from 'firebase/app'
 import 'firebase/firestore'
+import { prray } from 'prray'
 import { Blue as B } from './blue-types'
 
 let _BlueAdmin: typeof BlueA
@@ -108,7 +109,7 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
         ) => {
             const docs = querySnapshot?.docs || []
 
-            const array: T[] = []
+            const array = prray<T>([])
             const map = new Map<string, T>()
 
             for (const doc of docs) {
