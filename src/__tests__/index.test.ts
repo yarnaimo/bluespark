@@ -9,6 +9,7 @@ import { Spark, SparkQuery } from '../spark'
 import { getProvider } from './provider'
 
 const id = 'id'
+const path = 'users/id/posts/id'
 const date = dayjs().toDate()
 
 const provider = getProvider()
@@ -31,6 +32,7 @@ type IPostDecoded = {
     _createdAt: Blue.Timestamp
     _updatedAt: Blue.Timestamp
     _id: string
+    _path: string
     _ref: Blue.DocRef
     number: number
     date: Blue.Timestamp
@@ -117,6 +119,7 @@ describe('read', () => {
 
             expect(post).toMatchObject({
                 _id: id,
+                _path: path,
                 number: 17,
                 date: BlueW.Timestamp.fromDate(date),
                 text: 'text',
@@ -157,6 +160,7 @@ describe('read', () => {
 
                     expect(post).toMatchObject({
                         _id: id,
+                        _path: path,
                         number: '17',
                         date: BlueW.Timestamp.fromDate(date),
                         text: 'text',

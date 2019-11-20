@@ -28,6 +28,7 @@ export const withMeta = (
     const copied = { ...data }
 
     delete copied._id
+    delete copied._path
     delete copied._ref
     delete copied._createdAt
     delete copied._updatedAt
@@ -98,6 +99,7 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
             return decoder({
                 ...snapshot.data()!,
                 _id: snapshot.id,
+                _path: snapshot.ref.path,
                 _ref: snapshot.ref,
             })
         }

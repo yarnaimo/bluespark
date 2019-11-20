@@ -7,6 +7,7 @@ export namespace Blue {
         _createdAt: Blue.Timestamp
         _updatedAt: Blue.Timestamp
         _id: string
+        _path: string
         _ref: Blue.DocRef
     }
 
