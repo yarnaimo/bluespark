@@ -6,7 +6,8 @@ import {
     useDocument,
     useDocumentOnce,
 } from 'react-firebase-hooks/firestore'
-import { DFType, DXType, getDocRef, SparkQueryType, SparkType } from './spark'
+import { DFType, DXType, SparkQueryType, SparkType } from './spark'
+import { getDocRef } from './utils'
 
 export const createUseDocument = (
     _useDocument: typeof useDocument | typeof useDocumentOnce,

@@ -1,74 +1,21 @@
-import is from '@sindresorhus/is'
-import { firestore as BlueA } from 'firebase-admin'
 import { firestore as BlueW } from 'firebase/app'
 import 'firebase/firestore'
 import { prray } from 'prray'
 import { Blue as B } from './blue-types'
-
-let _BlueAdmin: typeof BlueA
-
-const getBlueAdmin = () => {
-    if (!_BlueAdmin) {
-        _BlueAdmin = require('firebase-admin').firestore
-    }
-
-    return _BlueAdmin
-}
-
-export const withMeta = (
-    action: 'create' | 'update',
-    docRef: B.DocRef,
-    data: B.DocData,
-) => {
-    const serverTimestamp =
-        docRef instanceof BlueW.DocumentReference
-            ? BlueW.FieldValue.serverTimestamp()
-            : getBlueAdmin().FieldValue.serverTimestamp()
-
-    const copied = { ...data }
-
-    delete copied._id
-    delete copied._path
-    delete copied._ref
-    delete copied._createdAt
-    delete copied._updatedAt
-
-    if (action === 'create') {
-        return {
-            ...copied,
-            _createdAt: serverTimestamp,
-            _updatedAt: serverTimestamp,
-        }
-    } else {
-        return {
-            ...copied,
-            _updatedAt: serverTimestamp,
-        }
-    }
-}
-
-export const getDocRef = (
-    collectionRef: B.CollectionRef,
-    doc: B.DocRef | string | null,
-) =>
-    is.null_(doc)
-        ? collectionRef.doc()
-        : is.string(doc)
-        ? collectionRef.doc(doc)
-        : doc
+import { getDocRef, withMeta } from './utils'
 
 type PT<FR> = FR extends true ? B.Firestore : B.Firestore | B.DocRef
 
-export type DFType<I extends B.Interface<any>> =
+export type DFType<I extends B.Interface<{}>> =
     | ((data: I['_D']) => any)
     | undefined
 
 export type DXType<
-    I extends B.Interface<any>,
+    I extends B.Interface<{}>,
     DF extends DFType<I>
 > = DF extends Function ? ReturnType<DF> : I['_D']
 
-export const SparkQuery = <I extends B.Interface<any>>() => {
+export const SparkQuery = <I extends B.Interface<{}>>() => {
     return <FR extends boolean, P extends PT<FR> = PT<FR>>({
         root,
         query,
@@ -90,7 +37,7 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
 
         const _decode: DecodeFn = <T = I['_D']>(
             snapshot: B.DocSnapshot,
-            decoder: (data: I['_D']) => T = data => data,
+            decoder: (data: I['_D']) => T = data => data as any,
         ) => {
             if (!snapshot.exists) {
                 return undefined as any
@@ -101,7 +48,7 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
                 _id: snapshot.id,
                 _path: snapshot.ref.path,
                 _ref: snapshot.ref,
-            })
+            } as I['_D'])
         }
 
         const _decodeQuerySnapshot = <T = I['_D']>(
@@ -154,7 +101,7 @@ export const SparkQuery = <I extends B.Interface<any>>() => {
     }
 }
 
-export const Spark = <I extends B.Interface<any>>() => {
+export const Spark = <I extends B.Interface<{}>>() => {
     return <FR extends boolean, P extends PT<FR> = PT<FR>>({
         root,
         collection: collectionFn,
@@ -228,15 +175,15 @@ export const Spark = <I extends B.Interface<any>>() => {
     }
 }
 
-export class __S__<I extends B.Interface<any>> {
+export class __S__<I extends B.Interface<{}>> {
     Spark = Spark<I>()
     SparkQuery = SparkQuery<I>()
 }
 
-export type SparkType<I extends B.Interface<any>> = ReturnType<
+export type SparkType<I extends B.Interface<{}>> = ReturnType<
     ReturnType<__S__<I>['Spark']>
 >
 
-export type SparkQueryType<I extends B.Interface<any>> = ReturnType<
+export type SparkQueryType<I extends B.Interface<{}>> = ReturnType<
     ReturnType<__S__<I>['SparkQuery']>
 >

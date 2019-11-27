@@ -11,6 +11,14 @@ export namespace Blue {
         _ref: Blue.DocRef
     }
 
+    export type MetaSerialized = {
+        _createdAt: string
+        _updatedAt: string
+        _id: string
+        _path: string
+        _ref: undefined
+    }
+
     export type IO<Read, Write> = Opaque<{
         read: Read
         write: Write

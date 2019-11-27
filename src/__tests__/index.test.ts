@@ -1,3 +1,4 @@
+import { firestore } from '@firebase/testing'
 import { renderHook } from '@testing-library/react-hooks'
 import dayjs from 'dayjs'
 import { firestore as BlueW } from 'firebase/app'
@@ -6,11 +7,15 @@ import { Merge } from 'type-fest'
 import { Blue } from '../blue-types'
 import { useSCollection, useSDoc } from '../hooks'
 import { Spark, SparkQuery } from '../spark'
+import { MSpark } from '../utils'
 import { getProvider } from './provider'
 
 const id = 'id'
 const path = 'users/id/posts/id'
 const date = dayjs().toDate()
+const date2 = dayjs()
+    .add(1, 'day')
+    .toDate()
 
 const provider = getProvider()
 let dbInstance: BlueW.Firestore
@@ -75,6 +80,138 @@ const getCollections = () => {
 
     return { userRef, _posts, gPosts }
 }
+
+describe('MSpark', () => {
+    test('isEqual', () => {
+        expect(MSpark.isEqual(undefined, undefined)).toBeTruthy()
+
+        expect(
+            MSpark.isEqual(
+                {
+                    _updatedAt: firestore.Timestamp.fromDate(date),
+                    _id: id,
+                } as Blue.Meta,
+                {
+                    _updatedAt: firestore.Timestamp.fromDate(date),
+                    _id: id,
+                } as Blue.Meta,
+            ),
+        ).toBeTruthy()
+
+        expect(
+            MSpark.isEqual(
+                {
+                    _updatedAt: firestore.Timestamp.fromDate(date),
+                    _id: id,
+                } as Blue.Meta,
+                {
+                    _updatedAt: firestore.Timestamp.fromDate(date2),
+                    _id: id,
+                } as Blue.Meta,
+            ),
+        ).toBeFalsy()
+
+        expect(
+            MSpark.isEqual(
+                {
+                    _updatedAt: firestore.Timestamp.fromDate(date),
+                    _id: id,
+                } as Blue.Meta,
+                {
+                    _updatedAt: firestore.Timestamp.fromDate(date),
+                    _id: 'id2',
+                } as Blue.Meta,
+            ),
+        ).toBeFalsy()
+
+        expect(
+            MSpark.isEqual(
+                {
+                    _updatedAt: date.toISOString(),
+                    _id: id,
+                } as Blue.MetaSerialized,
+                {
+                    _updatedAt: date.toISOString(),
+                    _id: id,
+                } as Blue.MetaSerialized,
+            ),
+        ).toBeTruthy()
+
+        expect(
+            MSpark.isEqual(
+                {
+                    _updatedAt: date.toISOString(),
+                    _id: id,
+                } as Blue.MetaSerialized,
+                {
+                    _updatedAt: date2.toISOString(),
+                    _id: id,
+                } as Blue.MetaSerialized,
+            ),
+        ).toBeFalsy()
+    })
+
+    test('serialize', () => {
+        const serialized = MSpark.serialize({
+            _createdAt: firestore.Timestamp.fromDate(date),
+            _updatedAt: firestore.Timestamp.fromDate(date2),
+            _id: id,
+            _path: path,
+            _ref: dbInstance.doc(path),
+            text: 'text',
+        })
+
+        expectType<{
+            _createdAt: string
+            _updatedAt: string
+            _id: string
+            _path: string
+            _ref: undefined
+            text: string
+        }>(serialized)
+
+        expect(serialized).toEqual({
+            _createdAt: date.toISOString(),
+            _updatedAt: date2.toISOString(),
+            _id: id,
+            _path: path,
+            _ref: undefined,
+            text: 'text',
+        })
+    })
+
+    test('deserialize', () => {
+        const deserialized = MSpark.deserialize(
+            {
+                _createdAt: date.toISOString(),
+                _updatedAt: date2.toISOString(),
+                _id: id,
+                _path: path,
+                _ref: undefined,
+                text: 'text',
+            },
+            false,
+        )
+
+        expectType<{
+            _createdAt: Blue.Timestamp
+            _updatedAt: Blue.Timestamp
+            _id: string
+            _path: string
+            _ref: undefined
+            text: string
+        }>(deserialized)
+
+        expect(deserialized).toEqual({
+            _createdAt: firestore.Timestamp.fromDate(date),
+            _updatedAt: firestore.Timestamp.fromDate(date2),
+            _id: id,
+            _path: path,
+            _ref: undefined,
+            text: 'text',
+        })
+    })
+})
 
 describe('read', () => {
     beforeEach(async () => {
