@@ -19,16 +19,18 @@ export const createUseDocument = (
         model,
         doc,
         decoder,
+        listen = true,
     }: {
         model: S
         doc: BlueW.DocumentReference | string
         decoder?: DF
+        listen?: boolean
     }) => {
         const _ref = getDocRef(
             model.collectionRef,
             doc,
         ) as BlueW.DocumentReference
-        const [snapshot, loading, error] = _useDocument(_ref)
+        const [snapshot, loading, error] = _useDocument(listen ? _ref : null)
         const data = useMemo(
             () => snapshot && model._decode<DXType<I, DF>>(snapshot, decoder),
             [snapshot, model, decoder],
@@ -52,14 +54,18 @@ export const createUseCollection = (
         model,
         q = a => a,
         decoder,
+        listen = true,
     }: {
         model: S
         q?: (collection: BlueW.Query) => BlueW.Query
         decoder?: DF
+        listen?: boolean
     }) => {
         const query = q(model.collectionRef as BlueW.CollectionReference)
 
-        const [querySnapshot, loading, error] = _useCollection(query)
+        const [querySnapshot, loading, error] = _useCollection(
+            listen ? query : null,
+        )
         const docs = useMemo(
             () =>
                 model._decodeQuerySnapshot<DXType<I, DF>>(
