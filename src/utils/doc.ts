@@ -3,7 +3,7 @@ import { firestore as BlueW } from 'firebase/app'
 import { Except, Merge } from 'type-fest'
 import { Blue as B, Blue } from '../blue-types'
 import { getFirestoreClass } from './module'
-import { deserializeTimestamp, serializeTimestamp } from './timestamp'
+import { MTimestamp } from './timestamp'
 
 export const getDocRef = (
     collectionRef: B.CollectionRef,
@@ -72,8 +72,8 @@ export class MSpark {
     ): Merge<T, Blue.MetaSerialized> {
         return {
             ...toSerialize,
-            _createdAt: serializeTimestamp(toSerialize._createdAt),
-            _updatedAt: serializeTimestamp(toSerialize._updatedAt),
+            _createdAt: MTimestamp.serialize(toSerialize._createdAt),
+            _updatedAt: MTimestamp.serialize(toSerialize._updatedAt),
             _ref: undefined,
         }
     }
@@ -84,8 +84,8 @@ export class MSpark {
     ): Merge<S, Except<Blue.Meta, '_ref'>> {
         return {
             ...serialized,
-            _createdAt: deserializeTimestamp(serialized._createdAt, admin),
-            _updatedAt: deserializeTimestamp(serialized._updatedAt, admin),
+            _createdAt: MTimestamp.deserialize(serialized._createdAt, admin),
+            _updatedAt: MTimestamp.deserialize(serialized._updatedAt, admin),
             _ref: undefined,
         }
     }
