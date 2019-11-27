@@ -46,6 +46,8 @@ export const withMeta = (
     }
 }
 
+export type SparkSerialized<T> = Merge<T, Blue.MetaSerialized>
+
 export class MSpark {
     static isEqual(a: undefined, b: undefined): boolean
     static isEqual(a: Blue.Meta, b: Blue.Meta): boolean
