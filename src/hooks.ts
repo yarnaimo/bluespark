@@ -1,4 +1,5 @@
 import { firestore as BlueW } from 'firebase/app'
+import { prray } from 'prray'
 import { useMemo } from 'react'
 import {
     useCollection,
@@ -57,27 +58,33 @@ export const createUseCollection = (
         decoder,
         listen = true,
     }: {
-        model: S
+        model: S | undefined
         q?: (collection: BlueW.Query) => BlueW.Query
         decoder?: DF
         listen?: boolean
     }) => {
-        const query = q(model.collectionRef as BlueW.CollectionReference)
+        const query =
+            model && q(model.collectionRef as BlueW.CollectionReference)
 
         const [querySnapshot, loading, error] = _useCollection(
             listen ? query : null,
         )
-        const docs = useMemo(
-            () =>
-                model._decodeQuerySnapshot<DXType<I, DF>>(
+        const docs = useMemo(() => {
+            if (model && query) {
+                return model._decodeQuerySnapshot<DXType<I, DF>>(
                     query,
                     querySnapshot,
                     decoder,
-                ),
-            [querySnapshot, model, decoder],
-        )
+                )
+            }
+            return {
+                query: undefined,
+                array: prray<DXType<I, DF>>([]),
+                map: new Map<string, DXType<I, DF>>(),
+            }
+        }, [querySnapshot, model, decoder])
 
-        return { ...docs, loading, error }
+        return { ...docs, query: docs.query, loading, error }
     }
 }
 

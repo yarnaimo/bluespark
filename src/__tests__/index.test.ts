@@ -281,7 +281,11 @@ describe('read', () => {
             const res1 = await posts.getQuery({ q: undefined, decoder })
 
             const { result, waitForNextUpdate } = renderHook(() =>
-                useSCollection({ model: posts, q: undefined, decoder }),
+                useSCollection({
+                    model: posts as typeof posts | undefined,
+                    q: undefined,
+                    decoder,
+                }),
             )
             await waitForNextUpdate()
             const { current: res2 } = result
