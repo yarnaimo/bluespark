@@ -242,7 +242,7 @@ describe('read', () => {
         const post1 = await _posts.getDoc({ doc: id })
 
         const { result, waitForNextUpdate } = renderHook(() =>
-            useSDoc({ model: _posts, doc: id }),
+            useSDoc(_posts, { doc: id }),
         )
         await waitForNextUpdate()
         const {
@@ -281,8 +281,7 @@ describe('read', () => {
             const res1 = await posts.getQuery({ q: undefined, decoder })
 
             const { result, waitForNextUpdate } = renderHook(() =>
-                useSCollection({
-                    model: posts as typeof posts | undefined,
+                useSCollection(posts as typeof posts | null, {
                     q: undefined,
                     decoder,
                 }),
